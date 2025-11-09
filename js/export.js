@@ -1,9 +1,9 @@
 /**
- * export.js
- * Obsługuje eksport CSV oraz komunikację z backendem PDF.
+ * export.js - ETAP 3
+ * CSV/PDF/Excel export utilities and backend integration.
  */
 
-const BACKEND_URL = 'http://localhost:8000';
+export const BACKEND_URL = 'http://localhost:8000';
 
 let resultProvider = null;
 let windowDataProvider = null;
@@ -13,39 +13,39 @@ export function registerExportHandlers(getResult, getWindowData) {
     windowDataProvider = typeof getWindowData === 'function' ? getWindowData : null;
 
     const csvButtons = document.querySelectorAll('.export-btn');
-    csvButtons.forEach(btn => {
+    csvButtons.forEach((btn) => {
         btn.addEventListener('click', () => {
             const type = btn.dataset.type;
             const result = resultProvider ? resultProvider() : null;
             if (!result) {
-                alert('Najpierw wykonaj obliczenia.');
+                alert('Please run calculations first.');
                 return;
             }
             const csv = buildCsv(type, result);
-            downloadFile(csv, `${type}_list.csv`);
+            downloadFile(csv, `${type}_list.csv`, 'text/csv');
         });
     });
 
     const pdfButtons = document.querySelectorAll('.export-pdf-btn');
-    pdfButtons.forEach(btn => {
+    pdfButtons.forEach((btn) => {
         btn.addEventListener('click', async (event) => {
             event.preventDefault();
             await exportPDF(btn);
         });
     });
 
+    const excelBtn = document.getElementById('export-excel-btn');
+    if (excelBtn) {
+        excelBtn.addEventListener('click', exportExcel);
+    }
+
     if (typeof window !== 'undefined') {
         window.exportPDF = exportPDF;
+        window.exportExcel = exportExcel;
         window.checkBackendHealth = checkBackendHealth;
     }
 }
 
-/**
- * Eksport pomocniczy dla testów – zwraca CSV bez pobierania pliku.
- * @param {string} type
- * @param {object} result
- * @returns {string}
- */
 export function generateCsvContent(type, result) {
     return buildCsv(type, result);
 }
@@ -53,15 +53,15 @@ export function generateCsvContent(type, result) {
 function buildCsv(type, result) {
     switch (type) {
         case 'precut':
-            return convertArrayToCsv(['Element', 'Width (mm)', 'Length (mm)', 'Quantity', 'Material'], result.precutList.map(item => [
+            return convertArrayToCsv(['Element', 'Width (mm)', 'Length (mm)', 'Quantity', 'Material'], result.precutList.map((item) => [
                 item.element,
                 item.width ?? '',
                 item.length ?? '',
                 item.quantity ?? 1,
-                item.section || 'Hardwood'
+                item.section || item.material || 'Hardwood'
             ]));
         case 'cut':
-            return convertArrayToCsv(['Element', 'Specification', 'Quantity', 'Notes'], result.cutList.map(item => [
+            return convertArrayToCsv(['Element', 'Specification', 'Quantity', 'Notes'], result.cutList.map((item) => [
                 item.element,
                 item.specification,
                 item.quantity,
@@ -69,27 +69,27 @@ function buildCsv(type, result) {
             ]));
         case 'shopping':
             const shoppingRows = [];
-            ['timber', 'glass', 'hardware', 'finishing'].forEach(group => {
-                (result.shoppingList[group] || []).forEach(item => {
+            ['timber', 'glass', 'hardware', 'finishing'].forEach((group) => {
+                (result.shoppingList[group] || []).forEach((item) => {
                     shoppingRows.push([item.material, item.specification, item.quantity, item.unit]);
                 });
             });
             return convertArrayToCsv(['Material', 'Specification', 'Quantity', 'Unit'], shoppingRows);
         case 'glazing':
-            return convertArrayToCsv(['Pane', 'Width (mm)', 'Height (mm)', 'Type'], result.glazing.panes.map(pane => [
+            return convertArrayToCsv(['Pane', 'Width (mm)', 'Height (mm)', 'Type'], result.glazing.panes.map((pane) => [
                 pane.id,
                 pane.width.toFixed(1),
                 pane.height.toFixed(1),
                 result.glazing.glazingType
             ]));
         default:
-            throw new Error(`Nieobsługiwany typ CSV: ${type}`);
+            throw new Error(`Unsupported CSV type: ${type}`);
     }
 }
 
 function convertArrayToCsv(headers, rows) {
     const allRows = [headers, ...rows];
-    return allRows.map(cols => cols.map(escapeCsvValue).join(',')).join('\n');
+    return allRows.map((cols) => cols.map(escapeCsvValue).join(',')).join('\n');
 }
 
 function escapeCsvValue(value) {
@@ -101,8 +101,8 @@ function escapeCsvValue(value) {
     return str;
 }
 
-function downloadFile(content, filename) {
-    const blob = new Blob([content], { type: 'text/csv' });
+export function downloadFile(content, filename, mimeType = 'application/octet-stream') {
+    const blob = content instanceof Blob ? content : new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -113,10 +113,6 @@ function downloadFile(content, filename) {
     URL.revokeObjectURL(url);
 }
 
-/**
- * Export window specification to PDF via backend.
- * @param {HTMLButtonElement|null} triggerButton
- */
 export async function exportPDF(triggerButton = null) {
     const pdfButtons = triggerButton ? [triggerButton] : Array.from(document.querySelectorAll('.export-pdf-btn'));
     setPdfButtonsState(pdfButtons, true);
@@ -124,12 +120,12 @@ export async function exportPDF(triggerButton = null) {
     try {
         const rawWindowData = windowDataProvider ? windowDataProvider() : (resultProvider ? resultProvider() : null);
         if (!rawWindowData) {
-            throw new Error('Brak danych okna. Najpierw wykonaj obliczenia.');
+            throw new Error('No window data. Run calculations first.');
         }
 
         const windowData = prepareWindowDataForPdf(rawWindowData);
         if (!windowData) {
-            throw new Error('Nie udało się przygotować danych do PDF.');
+            throw new Error('Failed to prepare data for PDF export.');
         }
 
         const requestBody = {
@@ -156,15 +152,7 @@ export async function exportPDF(triggerButton = null) {
         }
 
         const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `window_spec_${Date.now()}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-
+        downloadFile(blob, `window_spec_${Date.now()}.pdf`, 'application/pdf');
         showNotification('PDF generated successfully!', 'success');
     } catch (error) {
         console.error('PDF export error:', error);
@@ -174,11 +162,48 @@ export async function exportPDF(triggerButton = null) {
     }
 }
 
+export async function exportExcel() {
+    try {
+        const exportBtn = document.getElementById('export-excel-btn');
+        if (exportBtn) {
+            exportBtn.textContent = 'Generating Excel…';
+            exportBtn.disabled = true;
+        }
+
+        const windowData = windowDataProvider ? windowDataProvider() : (resultProvider ? resultProvider() : null);
+        if (!windowData) {
+            throw new Error('No window data available');
+        }
+
+        const response = await fetch(`${BACKEND_URL}/api/export/excel`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ windowData: prepareWindowDataForPdf(windowData) })
+        });
+
+        if (!response.ok) {
+            const error = await safeParseJson(response);
+            throw new Error(error?.detail || 'Excel generation failed');
+        }
+
+        const blob = await response.blob();
+        downloadFile(blob, `window_spec_${Date.now()}.xlsx`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        showNotification('Excel generated successfully!', 'success');
+    } catch (error) {
+        console.error('Excel export error:', error);
+        showNotification(`Excel export failed: ${error.message}`, 'error');
+    } finally {
+        const exportBtn = document.getElementById('export-excel-btn');
+        if (exportBtn) {
+            exportBtn.textContent = 'Export Excel';
+            exportBtn.disabled = false;
+        }
+    }
+}
+
 export async function checkBackendHealth() {
     try {
-        const response = await fetch(`${BACKEND_URL}/health`, {
-            method: 'GET'
-        });
+        const response = await fetch(`${BACKEND_URL}/health`, { method: 'GET' });
         return response.ok;
     } catch (error) {
         return false;
@@ -213,7 +238,9 @@ function prepareWindowDataForPdf(rawData) {
     const glazing = {
         configuration: config,
         totalPanes: glazingPanes.length,
-        panes: glazingPanes
+        panes: glazingPanes,
+        rows: rawData.glazing?.rows ?? null,
+        cols: rawData.glazing?.cols ?? null
     };
 
     const shoppingItems = flattenShoppingList(rawData.shoppingList || rawData.shopping || {});
@@ -233,6 +260,33 @@ function transformComponentGroup(group) {
     const result = {};
     Object.entries(group).forEach(([key, value]) => {
         if (!value) return;
+        if (value && typeof value === 'object' && (value.vertical || value.horizontal)) {
+            if (value.vertical) {
+                result[`${key}Vertical`] = {
+                    element: value.vertical.element || 'Vertical glazing bar',
+                    width: Number(value.vertical.width ?? 0),
+                    length: Number(value.vertical.length ?? 0),
+                    quantity: Number(value.vertical.quantity ?? 0),
+                    material: value.vertical.material || 'Timber',
+                    preCutLength: value.vertical.preCutLength ?? value.vertical.length ?? null,
+                    cutLength: value.vertical.cutLength ?? value.vertical.length ?? null,
+                    positions: value.vertical.positions || []
+                };
+            }
+            if (value.horizontal) {
+                result[`${key}Horizontal`] = {
+                    element: value.horizontal.element || 'Horizontal glazing bar',
+                    width: Number(value.horizontal.width ?? 0),
+                    length: Number(value.horizontal.length ?? 0),
+                    quantity: Number(value.horizontal.quantity ?? 0),
+                    material: value.horizontal.material || 'Timber',
+                    preCutLength: value.horizontal.preCutLength ?? value.horizontal.length ?? null,
+                    cutLength: value.horizontal.cutLength ?? value.horizontal.length ?? null,
+                    positions: value.horizontal.positions || []
+                };
+            }
+            return;
+        }
         result[key] = {
             element: value.element || key,
             width: Number(value.width ?? 0),
@@ -240,7 +294,8 @@ function transformComponentGroup(group) {
             quantity: Number(value.quantity ?? 1),
             material: value.material || value.section || 'Timber',
             preCutLength: value.preCutLength ?? value.length ?? null,
-            cutLength: value.cutLength ?? null
+            cutLength: value.cutLength ?? null,
+            section: value.section || null
         };
     });
     return result;
@@ -249,8 +304,8 @@ function transformComponentGroup(group) {
 function flattenShoppingList(shopping) {
     if (!shopping || typeof shopping !== 'object') return [];
     const items = [];
-    Object.values(shopping).forEach(group => {
-        (group || []).forEach(item => {
+    Object.values(shopping).forEach((group) => {
+        (group || []).forEach((item) => {
             items.push({
                 material: item.material,
                 specification: item.specification,
@@ -270,7 +325,7 @@ async function safeParseJson(response) {
     }
 }
 
-function showNotification(message, type = 'info') {
+export function showNotification(message, type = 'info') {
     if (typeof document === 'undefined') return;
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
@@ -297,7 +352,7 @@ function showNotification(message, type = 'info') {
 
 function setPdfButtonsState(buttons, isLoading) {
     const list = Array.isArray(buttons) ? buttons : [];
-    list.forEach(btn => {
+    list.forEach((btn) => {
         if (!btn) return;
         btn.disabled = isLoading;
         btn.textContent = isLoading ? 'Generating PDF…' : 'Export PDF';

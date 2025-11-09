@@ -1,8 +1,6 @@
-"""
-Data models for window calculations
-"""
+from typing import Dict, List, Optional
+
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict
 
 
 class FrameData(BaseModel):
@@ -25,12 +23,6 @@ class ComponentData(BaseModel):
     cutLength: Optional[float] = None
 
 
-class FrameComponents(BaseModel):
-    jambs: ComponentData
-    head: ComponentData
-    sill: ComponentData
-
-
 class GlazingPane(BaseModel):
     id: int
     width: float
@@ -42,6 +34,8 @@ class GlazingData(BaseModel):
     configuration: str
     totalPanes: int
     panes: List[GlazingPane]
+    rows: Optional[int] = None
+    cols: Optional[int] = None
 
 
 class ShoppingItem(BaseModel):
@@ -72,3 +66,16 @@ class PDFRequest(BaseModel):
     includeCutList: bool = True
     includeShoppingList: bool = True
     includeGlazingSpec: bool = True
+
+
+class ExcelRequest(BaseModel):
+    """Request for Excel workbook generation"""
+
+    windowData: WindowData
+
+
+class BatchPDFRequest(BaseModel):
+    """Batch PDF generation request"""
+
+    windows: List[WindowData]
+    title: Optional[str] = None
