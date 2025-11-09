@@ -7,16 +7,14 @@
 export const CONSTANTS = Object.freeze({
     // Frame ⇄ Sash deductions
     SASH_WIDTH_DEDUCTION: 178,
-    TOP_SASH_HEIGHT_DEDUCTION: 62.5,
-    BOTTOM_SASH_HEIGHT_DEDUCTION: 29.5,
+    SASH_HEIGHT_DEDUCTION: 106,
 
     // Frame component deductions
     JAMB_HEIGHT_DEDUCTION: 106,
+    HEAD_WIDTH_DEDUCTION: 138,
+    SILL_WIDTH_DEDUCTION: 138,
     EXTERNAL_HEAD_LINER_DEDUCTION: 204,
     INTERNAL_HEAD_LINER_DEDUCTION: 170,
-
-    // Horn allowances
-    TOP_STILE_HORN_ALLOWANCE: 70,
 
     // Glazing deductions
     GLASS_WIDTH_DEDUCTION: 114,
@@ -36,7 +34,6 @@ export const CONSTANTS = Object.freeze({
     // Waste factors
     FRAME_WASTE_FACTOR: 1.15,
     SASH_WASTE_FACTOR: 1.15,
-    COUNTERBALANCE_WASTE_FACTOR: 1.10,
 
     // Miscellaneous
     VAT_RATE: 0.2
@@ -54,12 +51,11 @@ export function calculateWindow(frameWidth, frameHeight, configuration = '2x2', 
     validateInputs(frameWidth, frameHeight, configuration);
 
     const sashWidth = frameWidth - CONSTANTS.SASH_WIDTH_DEDUCTION;
-    const topSashHeight = frameHeight / 2 - CONSTANTS.TOP_SASH_HEIGHT_DEDUCTION;
-    const bottomSashHeight = frameHeight / 2 - CONSTANTS.BOTTOM_SASH_HEIGHT_DEDUCTION;
+    const sashHeight = frameHeight - CONSTANTS.SASH_HEIGHT_DEDUCTION;
 
     const frameComponents = calculateFrameComponents(frameWidth, frameHeight);
-    const sashComponents = calculateSashComponents(sashWidth, topSashHeight, bottomSashHeight);
-    const glazing = calculateGlazing(sashWidth, topSashHeight, bottomSashHeight, configuration, options.glazingType);
+    const sashComponents = calculateSashComponents(sashWidth, sashHeight);
+    const glazing = calculateGlazing(sashWidth, sashHeight, configuration, options.glazingType);
     const precutList = buildPrecutList(frameComponents, sashComponents);
     const cutList = buildCutList(frameComponents, sashComponents);
     const shoppingList = buildShoppingList(frameComponents, sashComponents, glazing, options);
@@ -69,16 +65,9 @@ export function calculateWindow(frameWidth, frameHeight, configuration = '2x2', 
             width: frameWidth,
             height: frameHeight
         },
-        sashes: {
-            top: {
-                width: sashWidth,
-                height: topSashHeight,
-                heightWithHorn: topSashHeight + CONSTANTS.TOP_STILE_HORN_ALLOWANCE
-            },
-            bottom: {
-                width: sashWidth,
-                height: bottomSashHeight
-            }
+        sash: {
+            width: sashWidth,
+            height: sashHeight
         },
         components: {
             frame: frameComponents,
@@ -95,6 +84,12 @@ export function calculateWindow(frameWidth, frameHeight, configuration = '2x2', 
     };
 }
 
+/**
+ * Weryfikuje poprawność parametrów wejściowych.
+ * @param {number} frameWidth
+ * @param {number} frameHeight
+ * @param {string} configuration
+ */
 function validateInputs(frameWidth, frameHeight, configuration) {
     if (configuration !== '2x2') {
         throw new Error(`Configuration ${configuration} nie jest jeszcze dostępna w ETAP 1.`);
@@ -110,10 +105,16 @@ function validateInputs(frameWidth, frameHeight, configuration) {
     }
 }
 
+/**
+ * Oblicza długości elementów ramy na bazie wymiarów zewnętrznych.
+ * @param {number} frameWidth
+ * @param {number} frameHeight
+ * @returns {object}
+ */
 function calculateFrameComponents(frameWidth, frameHeight) {
     const jambLength = frameHeight - CONSTANTS.JAMB_HEIGHT_DEDUCTION;
-    const headLength = frameWidth;
-    const sillLength = frameWidth;
+    const headLength = frameWidth - CONSTANTS.HEAD_WIDTH_DEDUCTION;
+    const sillLength = frameWidth - CONSTANTS.SILL_WIDTH_DEDUCTION;
     const extHeadLiner = frameWidth - CONSTANTS.EXTERNAL_HEAD_LINER_DEDUCTION;
     const intHeadLiner = frameWidth - CONSTANTS.INTERNAL_HEAD_LINER_DEDUCTION;
     const extJambLiner = frameHeight;
@@ -130,69 +131,86 @@ function calculateFrameComponents(frameWidth, frameHeight) {
     };
 }
 
-function calculateSashComponents(sashWidth, topSashHeight, bottomSashHeight) {
-    const topHeightWithHorn = topSashHeight + CONSTANTS.TOP_STILE_HORN_ALLOWANCE;
-
+/**
+ * Buduje zestaw elementów skrzydła (sash) dla konfiguracji 2x2.
+ * @param {number} sashWidth
+ * @param {number} sashHeight
+ * @returns {object}
+ */
+function calculateSashComponents(sashWidth, sashHeight) {
     return {
-        top: {
-            stiles: { element: 'Top sash stiles', width: 57, length: topHeightWithHorn, quantity: 2, section: CONSTANTS.SASH_SECTION },
-            topRail: { element: 'Top rail', width: 57, length: sashWidth, quantity: 1, section: CONSTANTS.SASH_SECTION },
-            meetingRail: { element: 'Top meeting rail', width: 57, length: sashWidth, quantity: 1, section: CONSTANTS.SASH_SECTION }
-        },
-        bottom: {
-            stiles: { element: 'Bottom sash stiles', width: 57, length: bottomSashHeight, quantity: 2, section: CONSTANTS.SASH_SECTION },
-            bottomRail: { element: 'Bottom rail', width: 57, length: sashWidth, quantity: 1, section: CONSTANTS.SASH_SECTION },
-            meetingRail: { element: 'Bottom meeting rail', width: 57, length: sashWidth, quantity: 1, section: CONSTANTS.SASH_SECTION }
-        },
-        glazingBars: calculateGlazingBars(sashWidth, topSashHeight, bottomSashHeight)
+        stiles: { element: 'Sash stiles', width: 57, length: sashHeight, quantity: 2, section: CONSTANTS.SASH_SECTION },
+        topRail: { element: 'Top rail', width: 57, length: sashWidth, quantity: 1, section: CONSTANTS.SASH_SECTION },
+        meetingRail: { element: 'Meeting rail', width: 57, length: sashWidth, quantity: 1, section: CONSTANTS.SASH_SECTION },
+        bottomRail: { element: 'Bottom rail', width: 57, length: sashWidth, quantity: 1, section: CONSTANTS.SASH_SECTION },
+        glazingBars: calculateGlazingBars(sashWidth, sashHeight)
     };
 }
 
-function calculateGlazingBars(sashWidth, topSashHeight, bottomSashHeight) {
+/**
+ * Oblicza listwy szprosów dla układu 2x2.
+ * @param {number} sashWidth
+ * @param {number} sashHeight
+ * @returns {object}
+ */
+function calculateGlazingBars(sashWidth, sashHeight) {
     const clearWidth = sashWidth - CONSTANTS.GLASS_WIDTH_DEDUCTION + CONSTANTS.GLASS_WIDTH_ADD_BACK;
-    const topClearHeight = topSashHeight - CONSTANTS.GLASS_TOP_HEIGHT_DEDUCTION + CONSTANTS.GLASS_HEIGHT_ADD_BACK;
-    const bottomClearHeight = bottomSashHeight - CONSTANTS.GLASS_BOTTOM_HEIGHT_DEDUCTION + CONSTANTS.GLASS_HEIGHT_ADD_BACK;
-
+    const clearHeight = sashHeight - (CONSTANTS.GLASS_TOP_HEIGHT_DEDUCTION + CONSTANTS.GLASS_BOTTOM_HEIGHT_DEDUCTION) + CONSTANTS.GLASS_HEIGHT_ADD_BACK;
     const halfWidth = (clearWidth - CONSTANTS.GLAZING_BAR_WIDTH) / 2;
+    const halfHeight = (clearHeight - CONSTANTS.GLAZING_BAR_WIDTH) / 2;
 
     return {
         vertical: {
             element: 'Vertical glazing bar',
             width: CONSTANTS.GLAZING_BAR_WIDTH,
-            lengthTop: topClearHeight,
-            lengthBottom: bottomClearHeight,
+            length: clearHeight,
             quantity: 2
         },
         horizontal: {
             element: 'Horizontal glazing bar',
             width: CONSTANTS.GLAZING_BAR_WIDTH,
-            length: halfWidth,
-            quantity: 4
-        }
+            length: clearWidth,
+            quantity: 2
+        },
+        paneWidth: halfWidth,
+        paneHeight: halfHeight
     };
 }
 
-function calculateGlazing(sashWidth, topSashHeight, bottomSashHeight, configuration, glazingType = '4mm Clear') {
+/**
+ * Wylicza widoczne światło szkła oraz wymiary pojedynczych tafli.
+ * @param {number} sashWidth
+ * @param {number} sashHeight
+ * @param {string} configuration
+ * @param {string} glazingType
+ * @returns {object}
+ */
+function calculateGlazing(sashWidth, sashHeight, configuration, glazingType = '4mm Clear') {
     const clearWidth = sashWidth - CONSTANTS.GLASS_WIDTH_DEDUCTION + CONSTANTS.GLASS_WIDTH_ADD_BACK;
-    const topClearHeight = topSashHeight - CONSTANTS.GLASS_TOP_HEIGHT_DEDUCTION + CONSTANTS.GLASS_HEIGHT_ADD_BACK;
-    const bottomClearHeight = bottomSashHeight - CONSTANTS.GLASS_BOTTOM_HEIGHT_DEDUCTION + CONSTANTS.GLASS_HEIGHT_ADD_BACK;
-
+    const clearHeight = sashHeight - (CONSTANTS.GLASS_TOP_HEIGHT_DEDUCTION + CONSTANTS.GLASS_BOTTOM_HEIGHT_DEDUCTION) + CONSTANTS.GLASS_HEIGHT_ADD_BACK;
     const paneWidth = (clearWidth - CONSTANTS.GLAZING_BAR_WIDTH) / 2;
-    const topPaneHeight = (topClearHeight - CONSTANTS.GLAZING_BAR_WIDTH) / 2;
-    const bottomPaneHeight = (bottomClearHeight - CONSTANTS.GLAZING_BAR_WIDTH) / 2;
+    const paneHeight = (clearHeight - CONSTANTS.GLAZING_BAR_WIDTH) / 2;
 
     return {
         configuration,
         glazingType,
+        clearWidth,
+        clearHeight,
         panes: [
-            { id: 'T1', position: 'Top left', width: paneWidth, height: topPaneHeight, toughened: false },
-            { id: 'T2', position: 'Top right', width: paneWidth, height: topPaneHeight, toughened: false },
-            { id: 'B1', position: 'Bottom left', width: paneWidth, height: bottomPaneHeight, toughened: false },
-            { id: 'B2', position: 'Bottom right', width: paneWidth, height: bottomPaneHeight, toughened: false }
+            { id: 'T1', position: 'Top left', width: paneWidth, height: paneHeight, toughened: false },
+            { id: 'T2', position: 'Top right', width: paneWidth, height: paneHeight, toughened: false },
+            { id: 'B1', position: 'Bottom left', width: paneWidth, height: paneHeight, toughened: false },
+            { id: 'B2', position: 'Bottom right', width: paneWidth, height: paneHeight, toughened: false }
         ]
     };
 }
 
+/**
+ * Generuje listę elementów do przygotowania (pre-cut list).
+ * @param {object} frameComponents
+ * @param {object} sashComponents
+ * @returns {Array<object>}
+ */
 function buildPrecutList(frameComponents, sashComponents) {
     const items = [];
     items.push(frameComponents.head, frameComponents.sill);
@@ -200,14 +218,20 @@ function buildPrecutList(frameComponents, sashComponents) {
     items.push(frameComponents.externalHeadLiner, frameComponents.internalHeadLiner);
     items.push({ ...frameComponents.externalJambLiner });
     items.push({ ...frameComponents.internalJambLiner });
-
-    const { top, bottom } = sashComponents;
-    items.push(top.topRail, top.stiles, top.meetingRail);
-    items.push(bottom.bottomRail, bottom.stiles, bottom.meetingRail);
+    items.push(sashComponents.topRail, sashComponents.bottomRail, sashComponents.meetingRail);
+    items.push({ ...sashComponents.stiles });
+    items.push({ element: 'Vertical glazing bar', width: sashComponents.glazingBars.vertical.width, length: sashComponents.glazingBars.vertical.length, quantity: sashComponents.glazingBars.vertical.quantity, section: CONSTANTS.SASH_SECTION });
+    items.push({ element: 'Horizontal glazing bar', width: sashComponents.glazingBars.horizontal.width, length: sashComponents.glazingBars.horizontal.length, quantity: sashComponents.glazingBars.horizontal.quantity, section: CONSTANTS.SASH_SECTION });
 
     return items;
 }
 
+/**
+ * Generuje listę cięć dla stolarni.
+ * @param {object} frameComponents
+ * @param {object} sashComponents
+ * @returns {Array<object>}
+ */
 function buildCutList(frameComponents, sashComponents) {
     const list = [];
     list.push({ element: 'Head', specification: `${frameComponents.head.length} mm`, quantity: 1, notes: frameComponents.head.section });
@@ -218,24 +242,29 @@ function buildCutList(frameComponents, sashComponents) {
     list.push({ element: 'Jamb liner ext', specification: `${frameComponents.externalJambLiner.length} mm`, quantity: 2, notes: frameComponents.externalJambLiner.section });
     list.push({ element: 'Jamb liner int', specification: `${frameComponents.internalJambLiner.length} mm`, quantity: 2, notes: frameComponents.internalJambLiner.section });
 
-    const { top, bottom } = sashComponents;
-    list.push({ element: 'Top rail', specification: `${top.topRail.length} mm`, quantity: 1, notes: top.topRail.section });
-    list.push({ element: 'Top sash stiles', specification: `${top.stiles.length} mm`, quantity: 2, notes: `${top.stiles.section} (horned)` });
-    list.push({ element: 'Top meeting rail', specification: `${top.meetingRail.length} mm`, quantity: 1, notes: top.meetingRail.section });
-    list.push({ element: 'Bottom rail', specification: `${bottom.bottomRail.length} mm`, quantity: 1, notes: bottom.bottomRail.section });
-    list.push({ element: 'Bottom sash stiles', specification: `${bottom.stiles.length} mm`, quantity: 2, notes: bottom.stiles.section });
-    list.push({ element: 'Bottom meeting rail', specification: `${bottom.meetingRail.length} mm`, quantity: 1, notes: bottom.meetingRail.section });
+    list.push({ element: 'Top rail', specification: `${sashComponents.topRail.length} mm`, quantity: 1, notes: sashComponents.topRail.section });
+    list.push({ element: 'Meeting rail', specification: `${sashComponents.meetingRail.length} mm`, quantity: 1, notes: sashComponents.meetingRail.section });
+    list.push({ element: 'Bottom rail', specification: `${sashComponents.bottomRail.length} mm`, quantity: 1, notes: sashComponents.bottomRail.section });
+    list.push({ element: 'Sash stiles', specification: `${sashComponents.stiles.length} mm`, quantity: sashComponents.stiles.quantity, notes: sashComponents.stiles.section });
+    list.push({ element: 'Vertical glazing bars', specification: `${sashComponents.glazingBars.vertical.length.toFixed(1)} mm`, quantity: sashComponents.glazingBars.vertical.quantity, notes: `${CONSTANTS.GLAZING_BAR_WIDTH} mm width` });
+    list.push({ element: 'Horizontal glazing bars', specification: `${sashComponents.glazingBars.horizontal.length.toFixed(1)} mm`, quantity: sashComponents.glazingBars.horizontal.quantity, notes: `${CONSTANTS.GLAZING_BAR_WIDTH} mm width` });
 
     return list;
 }
 
+/**
+ * Szacuje ilości materiałów na potrzeby zakupów.
+ * @param {object} frameComponents
+ * @param {object} sashComponents
+ * @param {object} glazing
+ * @param {object} options
+ * @returns {object}
+ */
 function buildShoppingList(frameComponents, sashComponents, glazing, options) {
     const frameLinear = (frameComponents.head.length + frameComponents.sill.length + frameComponents.jambs.length * 2) * CONSTANTS.FRAME_WASTE_FACTOR / 1000;
     const linerLinear = (frameComponents.externalHeadLiner.length + frameComponents.internalHeadLiner.length + (frameComponents.externalJambLiner.length + frameComponents.internalJambLiner.length) * 2) * CONSTANTS.FRAME_WASTE_FACTOR / 1000;
 
-    const sashLinear = (sashComponents.top.topRail.length + sashComponents.top.meetingRail.length + sashComponents.bottom.meetingRail.length + sashComponents.bottom.bottomRail.length + sashComponents.top.stiles.length * 2 + sashComponents.bottom.stiles.length * 2) * CONSTANTS.SASH_WASTE_FACTOR / 1000;
-
-    const counterbalanceLinear = sashComponents.bottom.bottomRail.length * CONSTANTS.COUNTERBALANCE_WASTE_FACTOR / 1000;
+    const sashLinear = (sashComponents.topRail.length + sashComponents.meetingRail.length + sashComponents.bottomRail.length + sashComponents.stiles.length * sashComponents.stiles.quantity) * CONSTANTS.SASH_WASTE_FACTOR / 1000;
 
     const glazingItems = glazing.panes.map(pane => ({
         material: `Glass pane ${pane.id}`,
@@ -248,8 +277,7 @@ function buildShoppingList(frameComponents, sashComponents, glazing, options) {
         timber: [
             { material: 'Frame timber', specification: frameComponents.head.section, quantity: roundTo(frameLinear, 2), unit: 'm' },
             { material: 'Liners', specification: `${frameComponents.externalHeadLiner.section} & ${frameComponents.externalJambLiner.section}`, quantity: roundTo(linerLinear, 2), unit: 'm' },
-            { material: 'Sash timber', specification: sashComponents.top.topRail.section, quantity: roundTo(sashLinear, 2), unit: 'm' },
-            { material: 'Counterbalance groove', specification: 'Weights & cords allowance', quantity: roundTo(counterbalanceLinear, 2), unit: 'm' }
+            { material: 'Sash timber', specification: sashComponents.topRail.section, quantity: roundTo(sashLinear, 2), unit: 'm' }
         ],
         glass: glazingItems,
         hardware: [
@@ -262,6 +290,12 @@ function buildShoppingList(frameComponents, sashComponents, glazing, options) {
     };
 }
 
+/**
+ * Zaokrągla wartość do podanej liczby miejsc po przecinku.
+ * @param {number} value
+ * @param {number} decimals
+ * @returns {number}
+ */
 function roundTo(value, decimals = 2) {
     const factor = 10 ** decimals;
     return Math.round(value * factor) / factor;
