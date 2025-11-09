@@ -71,43 +71,28 @@ export function renderWindow(canvas, data) {
     // Frame
     drawRect(0, 0, frameWidth, frameHeight, '#1f2937', '#111827', 4);
 
-    const sashWidth = data.sashes.top.width;
-    const topSashHeight = data.sashes.top.heightWithHorn;
-    const bottomSashHeight = data.sashes.bottom.height;
-
+    const sashWidth = data.sash.width;
+    const sashHeight = data.sash.height;
     const sashX = (frameWidth - sashWidth) / 2;
+    const sashY = (frameHeight - sashHeight) / 2;
 
-    // Top sash (with horns as overhang at bottom)
-    drawRect(sashX, 0, sashWidth, topSashHeight, '#e5e7eb', '#1f2937', 2);
+    drawRect(sashX, sashY, sashWidth, sashHeight, '#e5e7eb', '#1f2937', 3);
 
-    // Bottom sash
-    drawRect(sashX, frameHeight - bottomSashHeight, sashWidth, bottomSashHeight, '#f1f5f9', '#1f2937', 2);
-
-    // Glass areas inside sashes
-    const glassWidth = sashWidth - CONSTANTS.GLASS_WIDTH_DEDUCTION + CONSTANTS.GLASS_WIDTH_ADD_BACK;
-    const topGlassHeight = data.sashes.top.height - CONSTANTS.GLASS_TOP_HEIGHT_DEDUCTION + CONSTANTS.GLASS_HEIGHT_ADD_BACK;
-    const bottomGlassHeight = data.sashes.bottom.height - CONSTANTS.GLASS_BOTTOM_HEIGHT_DEDUCTION + CONSTANTS.GLASS_HEIGHT_ADD_BACK;
-
+    const glassWidth = data.glazing.clearWidth;
+    const glassHeight = data.glazing.clearHeight;
     const glassX = sashX + (sashWidth - glassWidth) / 2;
-    const topGlassY = (data.sashes.top.height - topGlassHeight) / 2;
-    const bottomGlassY = frameHeight - bottomSashHeight + (bottomSashHeight - bottomGlassHeight) / 2;
+    const glassY = sashY + (sashHeight - glassHeight) / 2;
 
-    drawRect(glassX, topGlassY, glassWidth, topGlassHeight, 'rgba(147, 197, 253, 0.35)', '#0f172a', 1.5);
-    drawRect(glassX, bottomGlassY, glassWidth, bottomGlassHeight, 'rgba(147, 197, 253, 0.35)', '#0f172a', 1.5);
-
-    // Glazing bars (2x2)
-    const halfPaneWidth = (glassWidth - CONSTANTS.GLAZING_BAR_WIDTH) / 2;
-    const topHalfPaneHeight = (topGlassHeight - CONSTANTS.GLAZING_BAR_WIDTH) / 2;
-    const bottomHalfPaneHeight = (bottomGlassHeight - CONSTANTS.GLAZING_BAR_WIDTH) / 2;
+    drawRect(glassX, glassY, glassWidth, glassHeight, 'rgba(147, 197, 253, 0.35)', '#0f172a', 1.5);
 
     const drawBar = (x, y, width, height) => {
         ctx.fillStyle = '#1f2937';
         ctx.fillRect(offsetX + x * scale, offsetY + y * scale, width * scale, height * scale);
     };
 
-    drawBar(glassX + halfPaneWidth - CONSTANTS.GLAZING_BAR_WIDTH / 2, topGlassY, CONSTANTS.GLAZING_BAR_WIDTH, topGlassHeight);
-    drawBar(glassX + halfPaneWidth - CONSTANTS.GLAZING_BAR_WIDTH / 2, bottomGlassY, CONSTANTS.GLAZING_BAR_WIDTH, bottomGlassHeight);
+    const verticalX = glassX + glassWidth / 2 - CONSTANTS.GLAZING_BAR_WIDTH / 2;
+    drawBar(verticalX, glassY, CONSTANTS.GLAZING_BAR_WIDTH, glassHeight);
 
-    drawBar(glassX, topGlassY + topHalfPaneHeight - CONSTANTS.GLAZING_BAR_WIDTH / 2, glassWidth, CONSTANTS.GLAZING_BAR_WIDTH);
-    drawBar(glassX, bottomGlassY + bottomHalfPaneHeight - CONSTANTS.GLAZING_BAR_WIDTH / 2, glassWidth, CONSTANTS.GLAZING_BAR_WIDTH);
+    const horizontalY = glassY + glassHeight / 2 - CONSTANTS.GLAZING_BAR_WIDTH / 2;
+    drawBar(glassX, horizontalY, glassWidth, CONSTANTS.GLAZING_BAR_WIDTH);
 }

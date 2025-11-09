@@ -31,21 +31,17 @@ export function updateSummary(result) {
     const formatPair = (width, height) => `${Math.round(width)} × ${Math.round(height)} mm`;
     const summary = {
         frame: document.getElementById('summary-frame'),
-        topSash: document.getElementById('summary-top-sash'),
-        bottomSash: document.getElementById('summary-bottom-sash'),
-        glassTop: document.getElementById('summary-glass-top'),
-        glassBottom: document.getElementById('summary-glass-bottom')
+        sash: document.getElementById('summary-sash'),
+        glass: document.getElementById('summary-glass'),
+        pane: document.getElementById('summary-pane')
     };
 
     summary.frame.textContent = formatPair(result.frame.width, result.frame.height);
-    summary.topSash.textContent = formatPair(result.sashes.top.width, result.sashes.top.height);
-    summary.bottomSash.textContent = formatPair(result.sashes.bottom.width, result.sashes.bottom.height);
+    summary.sash.textContent = formatPair(result.sash.width, result.sash.height);
+    summary.glass.textContent = formatPair(result.glazing.clearWidth, result.glazing.clearHeight);
 
-    const topGlass = result.glazing.panes.filter(p => p.id.startsWith('T'))[0];
-    const bottomGlass = result.glazing.panes.filter(p => p.id.startsWith('B'))[0];
-
-    summary.glassTop.textContent = topGlass ? formatPair(topGlass.width, topGlass.height) : '–';
-    summary.glassBottom.textContent = bottomGlass ? formatPair(bottomGlass.width, bottomGlass.height) : '–';
+    const pane = result.glazing.panes[0];
+    summary.pane.textContent = pane ? formatPair(pane.width, pane.height) : '–';
 }
 
 export function populatePrecutTable(items) {
@@ -61,8 +57,8 @@ export function populatePrecutTable(items) {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td class="px-3 py-2">${item.element}</td>
-            <td class="px-3 py-2">${item.width ?? '–'}</td>
-            <td class="px-3 py-2">${item.length ?? '–'}</td>
+            <td class="px-3 py-2">${formatMeasurement(item.width)}</td>
+            <td class="px-3 py-2">${formatMeasurement(item.length)}</td>
             <td class="px-3 py-2">${item.quantity ?? 1}</td>
             <td class="px-3 py-2">${item.section || 'Hardwood'}</td>
         `;
@@ -146,4 +142,14 @@ function appendEmptyRow(body, colspan) {
     td.textContent = 'No data available yet.';
     tr.appendChild(td);
     body.appendChild(tr);
+}
+
+function formatMeasurement(value) {
+    if (value === null || value === undefined || value === '') {
+        return '–';
+    }
+    if (typeof value === 'number' && Number.isFinite(value)) {
+        return value % 1 === 0 ? `${value}` : value.toFixed(1);
+    }
+    return value;
 }

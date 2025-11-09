@@ -58,9 +58,12 @@
                         <option value="24mm Double Glazed">24mm Double Glazed</option>
                     </select>
                 </div>
-                <div class="flex items-end gap-4">
-                    <button type="submit" class="inline-flex items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2">Calculate</button>
-                    <button type="button" id="reset-form" class="inline-flex items-center justify-center rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2">Reset</button>
+                <div class="flex flex-col gap-3 md:flex-row md:items-end md:gap-4">
+                    <div class="flex items-end gap-4">
+                        <button type="submit" id="calculate-btn" class="inline-flex items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2">Calculate</button>
+                        <button type="button" id="reset-form" class="inline-flex items-center justify-center rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2">Reset</button>
+                    </div>
+                    <p id="form-error" class="hidden text-sm text-red-600" role="alert"></p>
                 </div>
             </form>
         </section>
@@ -89,20 +92,16 @@
                         <dd id="summary-frame">–</dd>
                     </div>
                     <div class="flex justify-between border-b pb-2">
-                        <dt>Top Sash Size</dt>
-                        <dd id="summary-top-sash">–</dd>
+                        <dt>Sash Size</dt>
+                        <dd id="summary-sash">–</dd>
                     </div>
                     <div class="flex justify-between border-b pb-2">
-                        <dt>Bottom Sash Size</dt>
-                        <dd id="summary-bottom-sash">–</dd>
+                        <dt>Visible Glass</dt>
+                        <dd id="summary-glass">–</dd>
                     </div>
                     <div class="flex justify-between border-b pb-2">
-                        <dt>Glass Size (Top)</dt>
-                        <dd id="summary-glass-top">–</dd>
-                    </div>
-                    <div class="flex justify-between border-b pb-2">
-                        <dt>Glass Size (Bottom)</dt>
-                        <dd id="summary-glass-bottom">–</dd>
+                        <dt>Pane Size</dt>
+                        <dd id="summary-pane">–</dd>
                     </div>
                 </dl>
             </div>

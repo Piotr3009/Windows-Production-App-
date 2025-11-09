@@ -22,6 +22,16 @@ export function registerExportHandlers(getResult) {
     });
 }
 
+/**
+ * Eksport pomocniczy dla testów – zwraca CSV bez pobierania pliku.
+ * @param {string} type
+ * @param {object} result
+ * @returns {string}
+ */
+export function generateCsvContent(type, result) {
+    return buildCsv(type, result);
+}
+
 function buildCsv(type, result) {
     switch (type) {
         case 'precut':

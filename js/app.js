@@ -14,9 +14,26 @@ function setupForm() {
     const resetBtn = document.getElementById('reset-form');
     const canvas = document.getElementById('window-canvas');
     const emptyState = document.getElementById('canvas-empty');
+    const submitBtn = document.getElementById('calculate-btn');
+    const errorBox = document.getElementById('form-error');
+    const defaultSubmitLabel = submitBtn ? submitBtn.textContent : 'Calculate';
+
+    const setLoading = (isLoading) => {
+        if (!submitBtn) return;
+        submitBtn.disabled = isLoading;
+        submitBtn.textContent = isLoading ? 'Calculating…' : defaultSubmitLabel;
+        submitBtn.classList.toggle('opacity-70', isLoading);
+        submitBtn.classList.toggle('cursor-not-allowed', isLoading);
+    };
 
     form.addEventListener('submit', (event) => {
         event.preventDefault();
+        if (errorBox) {
+            errorBox.textContent = '';
+            errorBox.classList.add('hidden');
+        }
+        setLoading(true);
+
         try {
             const formData = new FormData(form);
             const frameWidth = Number(formData.get('frameWidth'));
@@ -37,8 +54,13 @@ function setupForm() {
             emptyState.style.display = 'none';
         } catch (error) {
             console.error(error);
-            alert(error.message);
+            if (errorBox) {
+                errorBox.textContent = error.message;
+                errorBox.classList.remove('hidden');
+            }
         }
+
+        setLoading(false);
     });
 
     resetBtn.addEventListener('click', () => {
@@ -49,6 +71,11 @@ function setupForm() {
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         emptyState.style.display = '';
+        if (errorBox) {
+            errorBox.textContent = '';
+            errorBox.classList.add('hidden');
+        }
+        setLoading(false);
     });
 
     initRenderer(canvas);
@@ -68,7 +95,7 @@ function setupForm() {
 }
 
 function updateSummaryPlaceholder() {
-    ['summary-frame', 'summary-top-sash', 'summary-bottom-sash', 'summary-glass-top', 'summary-glass-bottom'].forEach(id => {
+    ['summary-frame', 'summary-sash', 'summary-glass', 'summary-pane'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.textContent = '–';
     });
