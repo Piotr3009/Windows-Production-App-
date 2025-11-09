@@ -199,6 +199,209 @@ td {
     padding-bottom: 0.5rem;
 }
 
+.p-4 {
+    padding: 1rem;
+}
+
+.space-y-4 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 1rem;
+}
+
+.md\:flex-row {
+    flex-direction: column;
+}
+
+@media (min-width: 768px) {
+    .md\:flex-row {
+        flex-direction: row;
+    }
+    .md\:items-center {
+        align-items: center;
+    }
+    .md\:justify-between {
+        justify-content: space-between;
+    }
+    .md\:col-span-2 {
+        grid-column: span 2 / span 2;
+    }
+    .md\:grid-cols-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.sm\:grid-cols-2 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+@media (min-width: 640px) {
+    .sm\:grid-cols-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    border: none;
+    padding: 0.45rem 0.9rem;
+}
+
+.btn-small {
+    padding: 0.3rem 0.7rem;
+    font-size: 0.8125rem;
+}
+
+.btn-primary {
+    background-color: var(--color-slate-900);
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background-color: #1e293b;
+}
+
+.btn-secondary {
+    background-color: var(--color-slate-100);
+    color: var(--color-slate-700);
+    border: 1px solid var(--color-slate-300);
+}
+
+.btn-secondary:hover {
+    background-color: var(--color-slate-50);
+}
+
+.btn-danger {
+    color: var(--color-red-600);
+    border: 1px solid rgba(220, 38, 38, 0.3);
+    background-color: rgba(220, 38, 38, 0.06);
+}
+
+.btn-danger:hover {
+    background-color: rgba(220, 38, 38, 0.12);
+}
+
+.empty-state {
+    color: var(--color-slate-500);
+    font-style: italic;
+}
+
+.batch-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--color-slate-200);
+    border-radius: 0.75rem;
+    background-color: #fff;
+    box-shadow: var(--shadow-sm);
+}
+
+.batch-item-meta {
+    color: var(--color-slate-500);
+    margin-top: 0.25rem;
+}
+
+.aggregate-table th,
+.aggregate-table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--color-slate-200);
+}
+
+.aggregate-table thead {
+    background-color: var(--color-slate-100);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+}
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    z-index: 1000;
+}
+
+.modal-window {
+    background: #fff;
+    border-radius: 1rem;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+    max-width: 32rem;
+    width: 100%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--color-slate-200);
+}
+
+.modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--color-slate-200);
+}
+
+.modal-content {
+    padding: 1.5rem;
+    overflow-y: auto;
+}
+
+.modal-close {
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--color-slate-500);
+}
+
+.project-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.project-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--color-slate-200);
+    border-radius: 0.75rem;
+    background-color: var(--color-slate-50);
+}
+
+.project-item h3 {
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+}
+
+.project-item p {
+    font-size: 0.875rem;
+    color: var(--color-slate-500);
+}
+
+.project-item-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
 .py-3 {
     padding-top: 0.75rem;
     padding-bottom: 0.75rem;

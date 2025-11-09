@@ -2,6 +2,8 @@
 Professional PDF generation with technical drawings
 Uses ReportLab + Matplotlib
 """
+from typing import Dict, List
+
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.lib import colors
@@ -190,17 +192,21 @@ def create_technical_drawing(window_data: WindowData):
     )
     ax.add_patch(sash_rect)
 
-    # Draw Glazing bars (for 2x2 configuration)
-    if window_data.config == '2x2':
-        # Vertical bar
-        v_bar_x = sash_offset_x + sw / 2
-        ax.plot([v_bar_x, v_bar_x], [sash_offset_y, sash_offset_y + sh],
-                'k-', linewidth=1.5, label='Glazing Bar')
+    rows = getattr(window_data.glazing, 'rows', None)
+    cols = getattr(window_data.glazing, 'cols', None)
+    if not rows or not cols:
+        rows = max(1, int(round(window_data.glazing.totalPanes ** 0.5)))
+        cols = max(1, int(round(window_data.glazing.totalPanes / rows)))
 
-        # Horizontal bar
-        h_bar_y = sash_offset_y + sh / 2
-        ax.plot([sash_offset_x, sash_offset_x + sw], [h_bar_y, h_bar_y],
-                'k-', linewidth=1.5)
+    # Draw glazing bars for grid
+    ax.set_linewidth(1.2)
+    for col_idx in range(1, cols):
+        x = sash_offset_x + (sw / cols) * col_idx
+        ax.plot([x, x], [sash_offset_y, sash_offset_y + sh], 'k-', linewidth=1.2)
+
+    for row_idx in range(1, rows):
+        y = sash_offset_y + (sh / rows) * row_idx
+        ax.plot([sash_offset_x, sash_offset_x + sw], [y, y], 'k-', linewidth=1.2)
 
     # Add dimensions as text
     # Frame width dimension
@@ -238,24 +244,33 @@ def create_technical_drawing(window_data: WindowData):
     return Image(img_buffer, width=160 * mm, height=200 * mm)
 
 
+def flatten_components(components: Dict) -> List[Dict]:
+    items: List[Dict] = []
+    for group in components.values():
+        if isinstance(group, dict):
+            for comp in group.values():
+                if isinstance(comp, dict) and comp.get('element'):
+                    items.append(comp)
+        elif isinstance(group, list):
+            for comp in group:
+                if isinstance(comp, dict) and comp.get('element'):
+                    items.append(comp)
+    return items
+
+
 def create_precut_table(window_data: WindowData):
     """Create Pre-cut list table"""
     data = [['Element', 'Width (mm)', 'Length (mm)', 'Qty', 'Material']]
 
-    # Frame components
-    frame_comps = window_data.components.get('frame', {})
-    for comp_name in ['jambs', 'head', 'sill']:
-        if comp_name in frame_comps:
-            comp = frame_comps[comp_name]
-            data.append([
-                comp['element'],
-                str(comp['width']),
-                str(comp.get('preCutLength', comp['length'])),
-                str(comp['quantity']),
-                comp['material']
-            ])
+    for component in flatten_components(window_data.components):
+        data.append([
+            component.get('element'),
+            str(component.get('width', '')),
+            str(component.get('preCutLength') or component.get('length', '')),
+            str(component.get('quantity', 1)),
+            component.get('material', '')
+        ])
 
-    # Create table
     table = Table(data, colWidths=[50 * mm, 30 * mm, 30 * mm, 20 * mm, 40 * mm])
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#34495e')),
@@ -275,19 +290,15 @@ def create_cut_table(window_data: WindowData):
     """Create Cut list table (final dimensions)"""
     data = [['Element', 'Width (mm)', 'Length (mm)', 'Qty', 'Material', 'Notes']]
 
-    # Frame components
-    frame_comps = window_data.components.get('frame', {})
-    for comp_name in ['jambs', 'head', 'sill']:
-        if comp_name in frame_comps:
-            comp = frame_comps[comp_name]
-            data.append([
-                comp['element'],
-                str(comp['width']),
-                str(comp.get('cutLength', comp['length'])),
-                str(comp['quantity']),
-                comp['material'],
-                'After deductions'
-            ])
+    for component in flatten_components(window_data.components):
+        data.append([
+            component.get('element'),
+            str(component.get('width', '')),
+            str(component.get('cutLength') or component.get('length', '')),
+            str(component.get('quantity', 1)),
+            component.get('material', ''),
+            component.get('section', '') or ''
+        ])
 
     table = Table(data, colWidths=[40 * mm, 25 * mm, 25 * mm, 15 * mm, 30 * mm, 35 * mm])
     table.setStyle(TableStyle([

@@ -10,8 +10,10 @@ import os
 from datetime import datetime
 import uuid
 
-from .models import PDFRequest
+from .models import BatchPDFRequest, ExcelRequest, PDFRequest
 from .pdf_generator import generate_window_pdf
+from .excel_generator import generate_window_excel
+from .batch_processor import generate_batch_pdf
 
 # Initialize FastAPI
 app = FastAPI(
@@ -44,6 +46,8 @@ async def root():
         "version": "1.0.0",
         "endpoints": {
             "pdf": "/api/export/pdf",
+            "excel": "/api/export/excel",
+            "batch_pdf": "/api/export/batch-pdf",
             "health": "/health"
         }
     }
@@ -101,6 +105,54 @@ async def export_pdf(request: PDFRequest):
             status_code=500,
             detail=f"PDF generation failed: {str(e)}"
         )
+
+
+@app.post("/api/export/excel")
+async def export_excel(request: ExcelRequest):
+    """Generate Excel workbook"""
+    try:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"window_spec_{timestamp}.xlsx"
+        filepath = OUTPUT_DIR / filename
+
+        generate_window_excel(
+            window_data=request.windowData,
+            output_path=str(filepath)
+        )
+
+        return FileResponse(
+            path=filepath,
+            filename=filename,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Excel generation failed: {str(e)}")
+
+
+@app.post("/api/export/batch-pdf")
+async def export_batch_pdf(request: BatchPDFRequest):
+    """Generate PDF summary for multiple windows"""
+    if not request.windows:
+        raise HTTPException(status_code=400, detail="No windows supplied")
+
+    try:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"batch_windows_{timestamp}.pdf"
+        filepath = OUTPUT_DIR / filename
+
+        generate_batch_pdf(
+            windows=request.windows,
+            output_path=str(filepath),
+            title=request.title or "Batch Window Specification"
+        )
+
+        return FileResponse(
+            path=filepath,
+            filename=filename,
+            media_type="application/pdf"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Batch PDF generation failed: {str(e)}")
 
 
 @app.delete("/api/cleanup")

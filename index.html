@@ -19,6 +19,27 @@
     </header>
 
     <main class="max-w-6xl mx-auto px-4 py-8 space-y-10">
+        <section class="bg-white rounded-xl shadow-sm p-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div class="flex items-center gap-3">
+                <button id="open-project-manager" class="inline-flex items-center gap-2 rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-700">
+                    <span aria-hidden="true">📁</span>
+                    Projects
+                </button>
+                <button id="save-project" class="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                    <span aria-hidden="true">💾</span>
+                    Save
+                </button>
+            </div>
+            <div class="flex items-center gap-3">
+                <button id="add-to-batch" class="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                    Add to Batch
+                </button>
+                <button id="export-excel-btn" class="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-500">
+                    Export Excel
+                </button>
+            </div>
+        </section>
+
         <section class="bg-white rounded-xl shadow-sm p-6">
             <h2 class="text-xl font-semibold mb-4">Window Parameters</h2>
             <form id="window-form" class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -35,12 +56,23 @@
                 <div>
                     <label for="configuration" class="block text-sm font-medium text-slate-700">Window Configuration</label>
                     <select id="configuration" name="configuration" class="mt-1 w-full rounded-md border-slate-300 shadow-sm focus:border-slate-500 focus:ring-slate-500">
-                        <option value="2x2">2 x 2 (ETAP 1)</option>
-                        <option value="3x3" disabled>3 x 3 (Coming Soon)</option>
-                        <option value="4x4" disabled>4 x 4 (Coming Soon)</option>
-                        <option value="6x6" disabled>6 x 6 (Coming Soon)</option>
-                        <option value="9x9" disabled>9 x 9 (Coming Soon)</option>
+                        <option value="2x2">2 × 2 (4 panes)</option>
+                        <option value="3x3">3 × 3 (9 panes)</option>
+                        <option value="4x4">4 × 4 (16 panes)</option>
+                        <option value="6x6">6 × 6 (36 panes)</option>
+                        <option value="9x9">9 × 9 (81 panes)</option>
+                        <option value="custom">Custom</option>
                     </select>
+                </div>
+                <div id="custom-config-group" class="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 hidden">
+                    <div>
+                        <label for="custom-rows" class="block text-sm font-medium text-slate-700">Rows</label>
+                        <input type="number" id="custom-rows" name="customRows" min="1" max="12" value="3" class="mt-1 w-full rounded-md border-slate-300 shadow-sm focus:border-slate-500 focus:ring-slate-500">
+                    </div>
+                    <div>
+                        <label for="custom-cols" class="block text-sm font-medium text-slate-700">Columns</label>
+                        <input type="number" id="custom-cols" name="customCols" min="1" max="12" value="3" class="mt-1 w-full rounded-md border-slate-300 shadow-sm focus:border-slate-500 focus:ring-slate-500">
+                    </div>
                 </div>
                 <div>
                     <label for="paint-color" class="block text-sm font-medium text-slate-700">Paint Color</label>
@@ -56,6 +88,22 @@
                         <option value="4mm Clear">4mm Clear</option>
                         <option value="6mm Toughened">6mm Toughened</option>
                         <option value="24mm Double Glazed">24mm Double Glazed</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="profile" class="block text-sm font-medium text-slate-700">Window Profile</label>
+                    <select id="profile" name="profile" class="mt-1 w-full rounded-md border-slate-300 shadow-sm focus:border-slate-500 focus:ring-slate-500">
+                        <option value="Standard profile">Standard profile</option>
+                        <option value="Slimline">Slimline</option>
+                        <option value="Heritage">Heritage</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="hardware" class="block text-sm font-medium text-slate-700">Hardware Set</label>
+                    <select id="hardware" name="hardware" class="mt-1 w-full rounded-md border-slate-300 shadow-sm focus:border-slate-500 focus:ring-slate-500">
+                        <option value="Classic brass">Classic brass</option>
+                        <option value="Satin chrome">Satin chrome</option>
+                        <option value="Antique bronze">Antique bronze</option>
                     </select>
                 </div>
                 <div class="flex flex-col gap-3 md:flex-row md:items-end md:gap-4">
@@ -104,6 +152,26 @@
                         <dd id="summary-pane">–</dd>
                     </div>
                 </dl>
+            </div>
+        </section>
+
+        <section class="bg-white rounded-xl shadow-sm p-6 space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-semibold">Batch Operations</h2>
+                <div class="flex items-center gap-3">
+                    <button id="batch-export-pdf" class="inline-flex items-center gap-2 rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-700">Export Batch PDF</button>
+                    <button id="batch-aggregate" class="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Aggregate Shopping List</button>
+                    <button id="batch-clear" class="inline-flex items-center gap-2 rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50">Clear Batch</button>
+                </div>
+            </div>
+            <div id="batch-list" class="space-y-3 text-sm text-slate-700">
+                <p class="empty-state">No windows in batch</p>
+            </div>
+            <div>
+                <h3 class="font-semibold text-lg mb-2">Aggregate Shopping List</h3>
+                <div id="batch-aggregate-list" class="overflow-x-auto text-sm text-slate-700">
+                    <p class="empty-state">No shopping items available.</p>
+                </div>
             </div>
         </section>
 

@@ -1,6 +1,6 @@
 /**
- * renderer.js
- * Odpowiada za rysowanie rzutu 2D okna na canvasie oraz obsługę zoom/pan.
+ * renderer.js - ETAP 3
+ * Canvas renderer with zoom/pan support for all sash window configurations.
  */
 
 import { CONSTANTS } from './calculations.js';
@@ -82,7 +82,7 @@ class CanvasPanzoom {
             try {
                 this.canvas.setPointerCapture(event.pointerId);
             } catch (error) {
-                // Ignore if capture is not available
+                // Ignore capture errors
             }
         }
         this.canvas.style.cursor = 'grabbing';
@@ -104,7 +104,7 @@ class CanvasPanzoom {
             try {
                 this.canvas.releasePointerCapture(event.pointerId);
             } catch (error) {
-                // Ignore if capture is not available
+                // Ignore release errors
             }
         }
         this.canvas.style.cursor = 'grab';
@@ -122,7 +122,7 @@ class CanvasPanzoom {
         this.applyTransform();
     }
 
-    reset(_options = {}) {
+    reset() {
         this.scale = 1;
         this.translateX = 0;
         this.translateY = 0;
@@ -130,10 +130,6 @@ class CanvasPanzoom {
     }
 }
 
-/**
- * Inicjalizuje pan/zoom na canvasie.
- * @param {HTMLCanvasElement} canvas
- */
 export function initRenderer(canvas) {
     if (!canvas) return;
     if (panzoomInstance) {
@@ -146,75 +142,109 @@ export function initRenderer(canvas) {
     });
 }
 
-/**
- * Zwraca instancję Panzoom dla obsługi przycisków sterujących.
- */
 export function getPanzoomInstance() {
     return panzoomInstance;
 }
 
-/**
- * Renderuje okno w oparciu o dane obliczeniowe.
- * @param {HTMLCanvasElement} canvas
- * @param {object} data wynik calculateWindow
- */
-export function renderWindow(canvas, data) {
-    if (!canvas || !data) return;
+export function renderWindow(canvas, windowData) {
+    if (!canvas || !windowData) return;
+
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const padding = 40;
-    const availableWidth = canvas.width - padding * 2;
-    const availableHeight = canvas.height - padding * 2;
+    const frameW = windowData.frame.width;
+    const frameH = windowData.frame.height;
+    const maxDim = Math.max(frameW, frameH);
+    if (maxDim <= 0) return;
 
-    const frameWidth = data.frame.width;
-    const frameHeight = data.frame.height;
+    const scale = Math.min(canvas.width * 0.8, canvas.height * 0.8) / maxDim;
+    const offsetX = (canvas.width - frameW * scale) / 2;
+    const offsetY = (canvas.height - frameH * scale) / 2;
 
-    const scale = Math.min(
-        availableWidth / frameWidth,
-        availableHeight / frameHeight
-    );
+    drawFrame(ctx, offsetX, offsetY, frameW * scale, frameH * scale);
 
-    const offsetX = (canvas.width - frameWidth * scale) / 2;
-    const offsetY = (canvas.height - frameHeight * scale) / 2;
+    const sashW = windowData.sash.width * scale;
+    const sashH = windowData.sash.height * scale;
+    const sashOffsetX = offsetX + (frameW * scale - sashW) / 2;
+    const sashOffsetY = offsetY + (frameH * scale - sashH) / 2;
+    drawSash(ctx, sashOffsetX, sashOffsetY, sashW, sashH);
 
-    const drawRect = (x, y, width, height, fill, stroke, lineWidth = 2) => {
-        ctx.save();
-        ctx.fillStyle = fill;
-        ctx.strokeStyle = stroke;
-        ctx.lineWidth = lineWidth;
-        ctx.beginPath();
-        ctx.rect(offsetX + x * scale, offsetY + y * scale, width * scale, height * scale);
-        ctx.fill();
-        ctx.stroke();
-        ctx.restore();
-    };
+    if (windowData.components?.sash?.glazingBars) {
+        drawGlazingBars(
+            ctx,
+            sashOffsetX,
+            sashOffsetY,
+            sashW,
+            sashH,
+            windowData.components.sash.glazingBars,
+            scale
+        );
+    }
 
-    // Frame
-    drawRect(0, 0, frameWidth, frameHeight, '#1f2937', '#111827', 4);
+    drawDimensions(ctx, offsetX, offsetY, frameW * scale, frameH * scale, frameW, frameH);
+}
 
-    const sashWidth = data.sash.width;
-    const sashHeight = data.sash.height;
-    const sashX = (frameWidth - sashWidth) / 2;
-    const sashY = (frameHeight - sashHeight) / 2;
+function drawFrame(ctx, x, y, w, h) {
+    ctx.strokeStyle = '#2c3e50';
+    ctx.lineWidth = 4;
+    ctx.fillStyle = '#ecf0f1';
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeRect(x, y, w, h);
+}
 
-    drawRect(sashX, sashY, sashWidth, sashHeight, '#e5e7eb', '#1f2937', 3);
+function drawSash(ctx, x, y, w, h) {
+    ctx.strokeStyle = '#34495e';
+    ctx.lineWidth = 3;
+    ctx.fillStyle = '#bdc3c7';
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeRect(x, y, w, h);
+}
 
-    const glassWidth = data.glazing.clearWidth;
-    const glassHeight = data.glazing.clearHeight;
-    const glassX = sashX + (sashWidth - glassWidth) / 2;
-    const glassY = sashY + (sashHeight - glassHeight) / 2;
+function drawGlazingBars(ctx, sashX, sashY, sashW, sashH, glazingBars, scale) {
+    const stileWidth = CONSTANTS.STILE_WIDTH * scale;
+    const topRailWidth = CONSTANTS.TOP_RAIL_WIDTH * scale;
+    const bottomRailWidth = CONSTANTS.BOTTOM_RAIL_WIDTH * scale;
 
-    drawRect(glassX, glassY, glassWidth, glassHeight, 'rgba(147, 197, 253, 0.35)', '#0f172a', 1.5);
+    const glazingX = sashX + stileWidth;
+    const glazingY = sashY + topRailWidth;
+    const glazingW = sashW - 2 * stileWidth;
+    const glazingH = sashH - topRailWidth - bottomRailWidth;
 
-    const drawBar = (x, y, width, height) => {
-        ctx.fillStyle = '#1f2937';
-        ctx.fillRect(offsetX + x * scale, offsetY + y * scale, width * scale, height * scale);
-    };
+    ctx.fillStyle = 'rgba(147, 197, 253, 0.28)';
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 1.5;
+    ctx.fillRect(glazingX, glazingY, glazingW, glazingH);
+    ctx.strokeRect(glazingX, glazingY, glazingW, glazingH);
 
-    const verticalX = glassX + glassWidth / 2 - CONSTANTS.GLAZING_BAR_WIDTH / 2;
-    drawBar(verticalX, glassY, CONSTANTS.GLAZING_BAR_WIDTH, glassHeight);
+    ctx.fillStyle = '#1f2937';
 
-    const horizontalY = glassY + glassHeight / 2 - CONSTANTS.GLAZING_BAR_WIDTH / 2;
-    drawBar(glassX, horizontalY, glassWidth, CONSTANTS.GLAZING_BAR_WIDTH);
+    if (glazingBars.vertical?.positions?.length) {
+        glazingBars.vertical.positions.forEach((pos) => {
+            const width = glazingBars.vertical.width * scale;
+            const x = glazingX + pos * scale - width / 2;
+            ctx.fillRect(x, glazingY, width, glazingH);
+        });
+    }
+
+    if (glazingBars.horizontal?.positions?.length) {
+        glazingBars.horizontal.positions.forEach((pos) => {
+            const height = glazingBars.horizontal.width * scale;
+            const y = glazingY + pos * scale - height / 2;
+            ctx.fillRect(glazingX, y, glazingW, height);
+        });
+    }
+}
+
+function drawDimensions(ctx, x, y, w, h, actualW, actualH) {
+    ctx.fillStyle = '#e74c3c';
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'center';
+
+    ctx.fillText(`${Math.round(actualW)}mm`, x + w / 2, y - 10);
+
+    ctx.save();
+    ctx.translate(x - 15, y + h / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText(`${Math.round(actualH)}mm`, 0, 0);
+    ctx.restore();
 }

@@ -1,0 +1,26 @@
+[
+    {
+        "id": "classic-2x2",
+        "name": "Classic 2×2",
+        "description": "Traditional 2×2 sash window with white finish",
+        "configuration": "2x2",
+        "options": {
+            "paintColor": "RAL 9010 White",
+            "glazingType": "4mm Clear",
+            "profile": "Standard profile",
+            "hardware": "Classic brass"
+        }
+    },
+    {
+        "id": "georgian-6x6",
+        "name": "Georgian 6×6",
+        "description": "Fine Georgian grid with slimline profile",
+        "configuration": "6x6",
+        "options": {
+            "paintColor": "RAL 7016 Grey",
+            "glazingType": "24mm Double Glazed",
+            "profile": "Slimline",
+            "hardware": "Satin chrome"
+        }
+    }
+]
