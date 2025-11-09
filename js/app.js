@@ -9,6 +9,33 @@ function getResult() {
     return latestResult;
 }
 
+export function getCurrentWindowData() {
+    const frameWidthInput = document.getElementById('frame-width');
+    const frameHeightInput = document.getElementById('frame-height');
+    const configurationSelect = document.getElementById('configuration');
+    const paintColorSelect = document.getElementById('paint-color');
+    const glazingTypeSelect = document.getElementById('glazing-type');
+
+    const frameWidth = Number(frameWidthInput?.value);
+    const frameHeight = Number(frameHeightInput?.value);
+
+    if (!Number.isFinite(frameWidth) || !Number.isFinite(frameHeight)) {
+        return null;
+    }
+
+    const configuration = configurationSelect?.value || '2x2';
+    const paintColor = paintColorSelect?.value || 'RAL 9010 White';
+    const glazingType = glazingTypeSelect?.value || '4mm Clear';
+
+    try {
+        const result = calculateWindow(frameWidth, frameHeight, configuration, { paintColor, glazingType });
+        return { ...result, config: configuration };
+    } catch (error) {
+        console.error('Failed to prepare window data for export:', error);
+        return null;
+    }
+}
+
 function setupForm() {
     const form = document.getElementById('window-form');
     const resetBtn = document.getElementById('reset-form');
@@ -43,6 +70,7 @@ function setupForm() {
             const glazingType = formData.get('glazingType');
 
             latestResult = calculateWindow(frameWidth, frameHeight, configuration, { paintColor, glazingType });
+            latestResult.config = configuration;
 
             updateSummary(latestResult);
             populatePrecutTable(latestResult.precutList);
@@ -119,6 +147,6 @@ function ready(fn) {
 ready(() => {
     initialiseTabs();
     setupForm();
-    registerExportHandlers(getResult);
+    registerExportHandlers(getResult, getCurrentWindowData);
     updateSummaryPlaceholder();
 });
