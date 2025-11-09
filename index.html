@@ -3,287 +3,631 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sash Window Designer</title>
+    <title>Sash Window Designer - Professional Production Tool</title>
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230f172a'/%3E%3Ctext x='32' y='42' font-size='36' text-anchor='middle' fill='%23f1f5f9' font-family='Inter, sans-serif'%3ES%3C/text%3E%3C/svg%3E">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231e3a8a'/%3E%3Ctext x='32' y='42' font-size='36' text-anchor='middle' fill='white' font-family='Inter, sans-serif' font-weight='700'%3ES%3C/text%3E%3C/svg%3E">
+
+    <!-- Styles -->
     <link rel="stylesheet" href="css/styles.css">
 </head>
-<body class="bg-slate-100 text-slate-900">
-    <header class="bg-white shadow-sm">
-        <div class="max-w-6xl mx-auto px-4 py-6">
-            <h1 class="text-3xl font-semibold tracking-tight">Sash Window Production Designer</h1>
-            <p class="text-slate-600 mt-2">Reverse engineered from <em>Sash Windows - 10.xlsx</em>. Configure, preview and export your sash window specifications.</p>
-        </div>
-    </header>
+<body>
+    <div class="app-container">
+        <!-- HEADER -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <button id="mobile-menu-toggle" class="btn btn-ghost btn-icon" aria-label="Toggle menu">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="3" y1="6" x2="17" y2="6"></line>
+                            <line x1="3" y1="10" x2="17" y2="10"></line>
+                            <line x1="3" y1="14" x2="17" y2="14"></line>
+                        </svg>
+                    </button>
+                    <div class="app-logo">
+                        <div class="logo-icon">S</div>
+                        <span>Sash Window Designer</span>
+                    </div>
+                </div>
 
-    <main class="max-w-6xl mx-auto px-4 py-8 space-y-10">
-        <section class="bg-white rounded-xl shadow-sm p-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div class="flex items-center gap-3">
-                <button id="open-project-manager" class="inline-flex items-center gap-2 rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-700">
-                    <span aria-hidden="true">📁</span>
-                    Projects
-                </button>
-                <button id="save-project" class="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                    <span aria-hidden="true">💾</span>
-                    Save
-                </button>
+                <div class="header-right">
+                    <div class="project-status" style="display: none;">
+                        <span style="font-size: var(--text-sm); color: var(--text-muted);">Saved 2 min ago</span>
+                    </div>
+                    <button id="open-project-manager" class="btn btn-outline btn-sm">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 3h7l3 3v11a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"></path>
+                        </svg>
+                        Projects
+                    </button>
+                    <button id="save-project" class="btn btn-primary btn-sm">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                            <polyline points="7 3 7 8 15 8"></polyline>
+                        </svg>
+                        Save
+                    </button>
+                </div>
             </div>
-            <div class="flex items-center gap-3">
-                <button id="add-to-batch" class="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                    Add to Batch
-                </button>
-                <button id="export-excel-btn" class="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-500">
-                    Export Excel
-                </button>
-            </div>
-        </section>
+        </header>
 
-        <section class="bg-white rounded-xl shadow-sm p-6">
-            <h2 class="text-xl font-semibold mb-4">Window Parameters</h2>
-            <form id="window-form" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label for="frame-width" class="block text-sm font-medium text-slate-700">Frame Width (mm)</label>
-                    <input type="number" id="frame-width" name="frameWidth" class="mt-1 w-full rounded-md border-slate-300 shadow-sm focus:border-slate-500 focus:ring-slate-500" min="400" max="3000" step="1" value="1200" required>
-                    <p class="text-xs text-slate-500 mt-1">Allowed range: 400 - 3000 mm</p>
-                </div>
-                <div>
-                    <label for="frame-height" class="block text-sm font-medium text-slate-700">Frame Height (mm)</label>
-                    <input type="number" id="frame-height" name="frameHeight" class="mt-1 w-full rounded-md border-slate-300 shadow-sm focus:border-slate-500 focus:ring-slate-500" min="600" max="3000" step="1" value="1500" required>
-                    <p class="text-xs text-slate-500 mt-1">Allowed range: 600 - 3000 mm</p>
-                </div>
-                <div>
-                    <label for="configuration" class="block text-sm font-medium text-slate-700">Window Configuration</label>
-                    <select id="configuration" name="configuration" class="mt-1 w-full rounded-md border-slate-300 shadow-sm focus:border-slate-500 focus:ring-slate-500">
-                        <option value="2x2">2 × 2 (4 panes)</option>
-                        <option value="3x3">3 × 3 (9 panes)</option>
-                        <option value="4x4">4 × 4 (16 panes)</option>
-                        <option value="6x6">6 × 6 (36 panes)</option>
-                        <option value="9x9">9 × 9 (81 panes)</option>
-                        <option value="custom">Custom</option>
-                    </select>
-                </div>
-                <div id="custom-config-group" class="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 hidden">
-                    <div>
-                        <label for="custom-rows" class="block text-sm font-medium text-slate-700">Rows</label>
-                        <input type="number" id="custom-rows" name="customRows" min="1" max="12" value="3" class="mt-1 w-full rounded-md border-slate-300 shadow-sm focus:border-slate-500 focus:ring-slate-500">
-                    </div>
-                    <div>
-                        <label for="custom-cols" class="block text-sm font-medium text-slate-700">Columns</label>
-                        <input type="number" id="custom-cols" name="customCols" min="1" max="12" value="3" class="mt-1 w-full rounded-md border-slate-300 shadow-sm focus:border-slate-500 focus:ring-slate-500">
-                    </div>
-                </div>
-                <div>
-                    <label for="paint-color" class="block text-sm font-medium text-slate-700">Paint Color</label>
-                    <select id="paint-color" name="paintColor" class="mt-1 w-full rounded-md border-slate-300 shadow-sm focus:border-slate-500 focus:ring-slate-500">
-                        <option value="RAL 9010 White">RAL 9010 White</option>
-                        <option value="RAL 7016 Grey">RAL 7016 Grey</option>
-                        <option value="Custom">Custom</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="glazing-type" class="block text-sm font-medium text-slate-700">Glazing Type</label>
-                    <select id="glazing-type" name="glazingType" class="mt-1 w-full rounded-md border-slate-300 shadow-sm focus:border-slate-500 focus:ring-slate-500">
-                        <option value="4mm Clear">4mm Clear</option>
-                        <option value="6mm Toughened">6mm Toughened</option>
-                        <option value="24mm Double Glazed">24mm Double Glazed</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="profile" class="block text-sm font-medium text-slate-700">Window Profile</label>
-                    <select id="profile" name="profile" class="mt-1 w-full rounded-md border-slate-300 shadow-sm focus:border-slate-500 focus:ring-slate-500">
-                        <option value="Standard profile">Standard profile</option>
-                        <option value="Slimline">Slimline</option>
-                        <option value="Heritage">Heritage</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="hardware" class="block text-sm font-medium text-slate-700">Hardware Set</label>
-                    <select id="hardware" name="hardware" class="mt-1 w-full rounded-md border-slate-300 shadow-sm focus:border-slate-500 focus:ring-slate-500">
-                        <option value="Classic brass">Classic brass</option>
-                        <option value="Satin chrome">Satin chrome</option>
-                        <option value="Antique bronze">Antique bronze</option>
-                    </select>
-                </div>
-                <div class="flex flex-col gap-3 md:flex-row md:items-end md:gap-4">
-                    <div class="flex items-end gap-4">
-                        <button type="submit" id="calculate-btn" class="inline-flex items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2">Calculate</button>
-                        <button type="button" id="reset-form" class="inline-flex items-center justify-center rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2">Reset</button>
-                    </div>
-                    <p id="form-error" class="hidden text-sm text-red-600" role="alert"></p>
-                </div>
-            </form>
-        </section>
+        <div class="app-body">
+            <!-- SIDEBAR NAVIGATION -->
+            <aside class="app-sidebar" id="app-sidebar">
+                <nav class="sidebar-nav">
+                    <div class="nav-group">
+                        <button class="nav-item is-active" data-section="design">
+                            <svg class="nav-item-icon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="3" width="14" height="14" rx="2"></rect>
+                                <path d="M3 10h14M10 3v14"></path>
+                            </svg>
+                            <span>Design</span>
+                        </button>
 
-        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="bg-white rounded-xl shadow-sm p-6 flex flex-col">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-xl font-semibold">Preview</h2>
-                    <div class="flex items-center gap-2">
-                        <button type="button" id="zoom-in" class="px-2 py-1 text-sm rounded-md border border-slate-300 hover:bg-slate-100">+</button>
-                        <button type="button" id="zoom-out" class="px-2 py-1 text-sm rounded-md border border-slate-300 hover:bg-slate-100">-</button>
-                        <button type="button" id="reset-view" class="px-2 py-1 text-sm rounded-md border border-slate-300 hover:bg-slate-100">Reset</button>
-                    </div>
-                </div>
-                <div class="flex-1 bg-slate-50 rounded-lg overflow-hidden border border-slate-200 relative">
-                    <canvas id="window-canvas" width="600" height="600" aria-label="Window preview" class="w-full h-[400px]"></canvas>
-                    <div id="canvas-empty" class="absolute inset-0 flex items-center justify-center text-slate-400 text-sm">Enter frame dimensions and press calculate to preview.</div>
-                </div>
-            </div>
+                        <button class="nav-item" data-section="cut-list">
+                            <svg class="nav-item-icon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M6 3l6 6 6-6M6 21l6-6 6 6"></path>
+                            </svg>
+                            <span>Cut List</span>
+                            <span class="nav-item-badge" id="cut-list-badge" style="display: none;">0</span>
+                        </button>
 
-            <div class="bg-white rounded-xl shadow-sm p-6">
-                <h2 class="text-xl font-semibold mb-4">Key Dimensions</h2>
-                <dl id="dimension-summary" class="grid grid-cols-1 gap-4 text-sm text-slate-700">
-                    <div class="flex justify-between border-b pb-2">
-                        <dt>Frame Size</dt>
-                        <dd id="summary-frame">–</dd>
-                    </div>
-                    <div class="flex justify-between border-b pb-2">
-                        <dt>Sash Size</dt>
-                        <dd id="summary-sash">–</dd>
-                    </div>
-                    <div class="flex justify-between border-b pb-2">
-                        <dt>Visible Glass</dt>
-                        <dd id="summary-glass">–</dd>
-                    </div>
-                    <div class="flex justify-between border-b pb-2">
-                        <dt>Pane Size</dt>
-                        <dd id="summary-pane">–</dd>
-                    </div>
-                </dl>
-            </div>
-        </section>
+                        <button class="nav-item" data-section="parts">
+                            <svg class="nav-item-icon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                            </svg>
+                            <span>Parts Library</span>
+                        </button>
 
-        <section class="bg-white rounded-xl shadow-sm p-6 space-y-4">
-            <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold">Batch Operations</h2>
-                <div class="flex items-center gap-3">
-                    <button id="batch-export-pdf" class="inline-flex items-center gap-2 rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-700">Export Batch PDF</button>
-                    <button id="batch-aggregate" class="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Aggregate Shopping List</button>
-                    <button id="batch-clear" class="inline-flex items-center gap-2 rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50">Clear Batch</button>
-                </div>
-            </div>
-            <div id="batch-list" class="space-y-3 text-sm text-slate-700">
-                <p class="empty-state">No windows in batch</p>
-            </div>
-            <div>
-                <h3 class="font-semibold text-lg mb-2">Aggregate Shopping List</h3>
-                <div id="batch-aggregate-list" class="overflow-x-auto text-sm text-slate-700">
-                    <p class="empty-state">No shopping items available.</p>
-                </div>
-            </div>
-        </section>
+                        <button class="nav-item" data-section="shopping">
+                            <svg class="nav-item-icon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="9" cy="21" r="1"></circle>
+                                <circle cx="20" cy="21" r="1"></circle>
+                                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                            </svg>
+                            <span>Shopping List</span>
+                        </button>
 
-        <section class="bg-white rounded-xl shadow-sm">
-            <div class="border-b border-slate-200">
-                <nav class="flex flex-wrap" aria-label="Result sections">
-                    <button class="result-tab px-4 py-3 text-sm font-medium border-b-2 border-transparent text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500" data-target="precut-table">Pre-cut List</button>
-                    <button class="result-tab px-4 py-3 text-sm font-medium border-b-2 border-transparent text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500" data-target="cut-table">Cut List</button>
-                    <button class="result-tab px-4 py-3 text-sm font-medium border-b-2 border-transparent text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500" data-target="shopping-table">Shopping List</button>
-                    <button class="result-tab px-4 py-3 text-sm font-medium border-b-2 border-transparent text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500" data-target="glazing-table">Glazing</button>
+                        <button class="nav-item" data-section="batch">
+                            <svg class="nav-item-icon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                            </svg>
+                            <span>Batch</span>
+                            <span class="nav-item-badge" id="batch-count-badge" style="display: none;">0</span>
+                        </button>
+                    </div>
                 </nav>
-            </div>
-            <div class="p-6 space-y-6">
-                <div class="result-panel" id="precut-table" hidden>
-                    <div class="flex justify-between items-center mb-3">
-                        <h3 class="font-semibold text-lg">Pre-cut Timber List</h3>
-                        <div class="export-buttons flex items-center gap-2">
-                            <button type="button" class="export-btn text-sm text-slate-600 hover:text-slate-900" data-type="precut">Export CSV</button>
-                            <button type="button" class="export-pdf-btn text-sm text-white bg-slate-900 hover:bg-slate-700 px-3 py-1 rounded-md shadow-sm">Export PDF</button>
-                        </div>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-slate-200 text-sm">
-                            <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                <tr>
-                                    <th class="px-3 py-2">Element</th>
-                                    <th class="px-3 py-2">Width (mm)</th>
-                                    <th class="px-3 py-2">Length (mm)</th>
-                                    <th class="px-3 py-2">Quantity</th>
-                                    <th class="px-3 py-2">Material</th>
-                                </tr>
-                            </thead>
-                            <tbody id="precut-body" class="divide-y divide-slate-200"></tbody>
-                        </table>
-                    </div>
-                </div>
 
-                <div class="result-panel" id="cut-table" hidden>
-                    <div class="flex justify-between items-center mb-3">
-                        <h3 class="font-semibold text-lg">Cut List</h3>
-                        <div class="export-buttons flex items-center gap-2">
-                            <button type="button" class="export-btn text-sm text-slate-600 hover:text-slate-900" data-type="cut">Export CSV</button>
-                            <button type="button" class="export-pdf-btn text-sm text-white bg-slate-900 hover:bg-slate-700 px-3 py-1 rounded-md shadow-sm">Export PDF</button>
-                        </div>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-slate-200 text-sm">
-                            <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                <tr>
-                                    <th class="px-3 py-2">Element</th>
-                                    <th class="px-3 py-2">Specification</th>
-                                    <th class="px-3 py-2">Quantity</th>
-                                    <th class="px-3 py-2">Notes</th>
-                                </tr>
-                            </thead>
-                            <tbody id="cut-body" class="divide-y divide-slate-200"></tbody>
-                        </table>
-                    </div>
+                <div class="sidebar-footer">
+                    <button id="export-excel-btn" class="btn btn-success btn-block">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Export Excel
+                    </button>
                 </div>
+            </aside>
 
-                <div class="result-panel" id="shopping-table" hidden>
-                    <div class="flex justify-between items-center mb-3">
-                        <h3 class="font-semibold text-lg">Shopping List</h3>
-                        <div class="export-buttons flex items-center gap-2">
-                            <button type="button" class="export-btn text-sm text-slate-600 hover:text-slate-900" data-type="shopping">Export CSV</button>
-                            <button type="button" class="export-pdf-btn text-sm text-white bg-slate-900 hover:bg-slate-700 px-3 py-1 rounded-md shadow-sm">Export PDF</button>
+            <!-- MAIN CONTENT -->
+            <main class="app-main">
+                <div class="main-content">
+
+                    <!-- DESIGN SECTION -->
+                    <section id="section-design" class="content-section">
+                        <div style="display: grid; grid-template-columns: 1fr; gap: var(--space-6); margin-bottom: var(--space-8);">
+
+                            <!-- Window Preview (Left - Full Width on Mobile, Half on Desktop) -->
+                            <div class="preview-container" style="grid-column: 1;">
+                                <div class="preview-header">
+                                    <h3 class="card-title">Window Preview</h3>
+                                    <div class="preview-controls">
+                                        <button type="button" id="zoom-in" class="btn btn-ghost btn-sm" title="Zoom In">
+                                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <circle cx="10" cy="10" r="7"></circle>
+                                                <line x1="10" y1="7" x2="10" y2="13"></line>
+                                                <line x1="7" y1="10" x2="13" y2="10"></line>
+                                                <line x1="17" y1="17" x2="21" y2="21"></line>
+                                            </svg>
+                                        </button>
+                                        <button type="button" id="zoom-out" class="btn btn-ghost btn-sm" title="Zoom Out">
+                                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <circle cx="10" cy="10" r="7"></circle>
+                                                <line x1="7" y1="10" x2="13" y2="10"></line>
+                                                <line x1="17" y1="17" x2="21" y2="21"></line>
+                                            </svg>
+                                        </button>
+                                        <button type="button" id="reset-view" class="btn btn-ghost btn-sm" title="Reset View">
+                                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <polyline points="23 4 23 10 17 10"></polyline>
+                                                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="preview-canvas-wrapper">
+                                    <canvas id="window-canvas" class="preview-canvas" width="800" height="600" aria-label="Window preview"></canvas>
+                                    <div id="canvas-empty" class="preview-empty">
+                                        <svg width="64" height="64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: var(--space-3); opacity: 0.3;">
+                                            <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                                            <path d="M3 12h18M12 3v18"></path>
+                                        </svg>
+                                        <p>Configure your window and press Calculate to preview</p>
+                                    </div>
+                                </div>
+
+                                <div class="preview-dimensions" id="preview-dimensions" style="display: none;">
+                                    <div class="preview-dimension">
+                                        <div class="preview-dimension-value" id="preview-width">-</div>
+                                        <div class="preview-dimension-label">Width</div>
+                                    </div>
+                                    <div class="preview-dimension">
+                                        <div class="preview-dimension-value" id="preview-height">-</div>
+                                        <div class="preview-dimension-label">Height</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-slate-200 text-sm">
-                            <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                <tr>
-                                    <th class="px-3 py-2">Material</th>
-                                    <th class="px-3 py-2">Specification</th>
-                                    <th class="px-3 py-2">Quantity</th>
-                                    <th class="px-3 py-2">Unit</th>
-                                </tr>
-                            </thead>
-                            <tbody id="shopping-body" class="divide-y divide-slate-200"></tbody>
-                        </table>
-                    </div>
-                </div>
 
-                <div class="result-panel" id="glazing-table" hidden>
-                    <div class="flex justify-between items-center mb-3">
-                        <h3 class="font-semibold text-lg">Glazing Schedule</h3>
-                        <div class="export-buttons flex items-center gap-2">
-                            <button type="button" class="export-btn text-sm text-slate-600 hover:text-slate-900" data-type="glazing">Export CSV</button>
-                            <button type="button" class="export-pdf-btn text-sm text-white bg-slate-900 hover:bg-slate-700 px-3 py-1 rounded-md shadow-sm">Export PDF</button>
+                        <!-- Window Configuration Form -->
+                        <div class="card">
+                            <div class="card-header">
+                                <div>
+                                    <h3 class="card-title">Window Specifications</h3>
+                                    <p class="card-subtitle">Configure your sash window dimensions and options</p>
+                                </div>
+                            </div>
+
+                            <form id="window-form">
+                                <div style="display: grid; grid-template-columns: 1fr; gap: var(--space-4);">
+
+                                    <!-- Row 1: Dimensions -->
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);">
+                                        <div class="form-group">
+                                            <label for="frame-width" class="form-label">Frame Width</label>
+                                            <div class="input-group">
+                                                <input type="number" id="frame-width" name="frameWidth" class="form-input" min="400" max="3000" step="1" value="1200" required>
+                                                <div class="input-addon">mm</div>
+                                            </div>
+                                            <p class="form-hint">Range: 400 - 3000 mm</p>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label for="frame-height" class="form-label">Frame Height</label>
+                                            <div class="input-group">
+                                                <input type="number" id="frame-height" name="frameHeight" class="form-input" min="600" max="3000" step="1" value="1500" required>
+                                                <div class="input-addon">mm</div>
+                                            </div>
+                                            <p class="form-hint">Range: 600 - 3000 mm</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Row 2: Configuration & Paint -->
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);">
+                                        <div class="form-group">
+                                            <label for="configuration" class="form-label">Window Configuration</label>
+                                            <select id="configuration" name="configuration" class="form-select">
+                                                <option value="2x2">2 × 2 (4 panes)</option>
+                                                <option value="3x3">3 × 3 (9 panes)</option>
+                                                <option value="4x4">4 × 4 (16 panes)</option>
+                                                <option value="6x6">6 × 6 (36 panes)</option>
+                                                <option value="9x9">9 × 9 (81 panes)</option>
+                                                <option value="custom">Custom</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label for="paint-color" class="form-label">Paint Color</label>
+                                            <select id="paint-color" name="paintColor" class="form-select">
+                                                <option value="RAL 9010 White">RAL 9010 White</option>
+                                                <option value="RAL 7016 Grey">RAL 7016 Grey</option>
+                                                <option value="Custom">Custom</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <!-- Custom Configuration (Hidden by default) -->
+                                    <div id="custom-config-group" class="hidden" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);">
+                                        <div class="form-group">
+                                            <label for="custom-rows" class="form-label">Rows</label>
+                                            <input type="number" id="custom-rows" name="customRows" min="1" max="12" value="3" class="form-input">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="custom-cols" class="form-label">Columns</label>
+                                            <input type="number" id="custom-cols" name="customCols" min="1" max="12" value="3" class="form-input">
+                                        </div>
+                                    </div>
+
+                                    <!-- Row 3: Glazing & Profile -->
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);">
+                                        <div class="form-group">
+                                            <label for="glazing-type" class="form-label">Glazing Type</label>
+                                            <select id="glazing-type" name="glazingType" class="form-select">
+                                                <option value="4mm Clear">4mm Clear</option>
+                                                <option value="6mm Toughened">6mm Toughened</option>
+                                                <option value="24mm Double Glazed">24mm Double Glazed</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label for="profile" class="form-label">Window Profile</label>
+                                            <select id="profile" name="profile" class="form-select">
+                                                <option value="Standard profile">Standard profile</option>
+                                                <option value="Slimline">Slimline</option>
+                                                <option value="Heritage">Heritage</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <!-- Row 4: Hardware -->
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);">
+                                        <div class="form-group">
+                                            <label for="hardware" class="form-label">Hardware Set</label>
+                                            <select id="hardware" name="hardware" class="form-select">
+                                                <option value="Classic brass">Classic brass</option>
+                                                <option value="Satin chrome">Satin chrome</option>
+                                                <option value="Antique bronze">Antique bronze</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <!-- Actions -->
+                                    <div style="display: flex; gap: var(--space-3); align-items: center;">
+                                        <button type="submit" id="calculate-btn" class="btn btn-primary btn-lg">
+                                            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <circle cx="12" cy="12" r="10"></circle>
+                                                <polyline points="12 6 12 12 16 14"></polyline>
+                                            </svg>
+                                            Calculate Window
+                                        </button>
+                                        <button type="button" id="reset-form" class="btn btn-outline">Reset</button>
+                                        <button type="button" id="add-to-batch" class="btn btn-secondary">
+                                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                            </svg>
+                                            Add to Batch
+                                        </button>
+                                    </div>
+
+                                    <p id="form-error" class="form-error hidden" role="alert"></p>
+                                </div>
+                            </form>
                         </div>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-slate-200 text-sm">
-                            <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                <tr>
-                                    <th class="px-3 py-2">Pane</th>
-                                    <th class="px-3 py-2">Width (mm)</th>
-                                    <th class="px-3 py-2">Height (mm)</th>
-                                    <th class="px-3 py-2">Type</th>
-                                </tr>
-                            </thead>
-                            <tbody id="glazing-body" class="divide-y divide-slate-200"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </main>
 
-    <footer class="max-w-6xl mx-auto px-4 pb-10 text-xs text-slate-500">
-        <p>ETAP 1 MVP – wszystkie wartości pochodzą z arkusza <em>Sash Windows - 10.xlsx</em>. Kolejne konfiguracje zostaną dodane w następnych etapach.</p>
-    </footer>
+                        <!-- Stats Grid -->
+                        <div class="stats-grid" id="stats-grid" style="display: none; margin-top: var(--space-6);">
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                                    </svg>
+                                </div>
+                                <div class="stat-label">Total Parts</div>
+                                <div class="stat-value" id="stat-parts">-</div>
+                            </div>
+
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+                                    </svg>
+                                </div>
+                                <div class="stat-label">Glass Panes</div>
+                                <div class="stat-value" id="stat-panes">-</div>
+                            </div>
+
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M4 7h16M4 12h16M4 17h16"></path>
+                                    </svg>
+                                </div>
+                                <div class="stat-label">Total Length</div>
+                                <div class="stat-value" id="stat-length">-</div>
+                            </div>
+
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M3 3v18h18"></path>
+                                        <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"></path>
+                                    </svg>
+                                </div>
+                                <div class="stat-label">Configuration</div>
+                                <div class="stat-value" id="stat-config" style="font-size: var(--text-2xl);">-</div>
+                            </div>
+                        </div>
+
+                        <!-- Key Dimensions Card -->
+                        <div class="card" id="dimensions-card" style="display: none; margin-top: var(--space-6);">
+                            <div class="card-header">
+                                <h3 class="card-title">Key Dimensions</h3>
+                            </div>
+                            <dl id="dimension-summary" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); font-size: var(--text-sm);">
+                                <div style="display: flex; justify-content: space-between; padding-bottom: var(--space-2); border-bottom: 1px solid var(--border);">
+                                    <dt style="color: var(--text-muted);">Frame Size</dt>
+                                    <dd id="summary-frame" style="font-family: var(--font-mono); font-weight: 600;">–</dd>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding-bottom: var(--space-2); border-bottom: 1px solid var(--border);">
+                                    <dt style="color: var(--text-muted);">Sash Size</dt>
+                                    <dd id="summary-sash" style="font-family: var(--font-mono); font-weight: 600;">–</dd>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding-bottom: var(--space-2); border-bottom: 1px solid var(--border);">
+                                    <dt style="color: var(--text-muted);">Visible Glass</dt>
+                                    <dd id="summary-glass" style="font-family: var(--font-mono); font-weight: 600;">–</dd>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding-bottom: var(--space-2); border-bottom: 1px solid var(--border);">
+                                    <dt style="color: var(--text-muted);">Pane Size</dt>
+                                    <dd id="summary-pane" style="font-family: var(--font-mono); font-weight: 600;">–</dd>
+                                </div>
+                            </dl>
+                        </div>
+                    </section>
+
+                    <!-- CUT LIST SECTION -->
+                    <section id="section-cut-list" class="content-section hidden">
+                        <div class="card">
+                            <div class="card-header">
+                                <div>
+                                    <h2 class="card-title">Production Cut List</h2>
+                                    <p class="card-subtitle">Organized by production stages</p>
+                                </div>
+                                <button type="button" class="btn btn-primary export-pdf-btn">
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                        <polyline points="14 2 14 8 20 8"></polyline>
+                                    </svg>
+                                    Export PDF
+                                </button>
+                            </div>
+
+                            <div class="tabs">
+                                <div class="tabs-nav">
+                                    <button class="result-tab active" data-target="precut-table">Pre-cut List</button>
+                                    <button class="result-tab" data-target="cut-table">Final Cut List</button>
+                                    <button class="result-tab" data-target="glazing-table">Glazing Schedule</button>
+                                </div>
+                            </div>
+
+                            <div class="result-panel" id="precut-table">
+                                <div class="table-container">
+                                    <table class="table">
+                                        <thead>
+                                            <tr>
+                                                <th>Element</th>
+                                                <th>Width (mm)</th>
+                                                <th>Length (mm)</th>
+                                                <th>Quantity</th>
+                                                <th>Material</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="precut-body">
+                                            <tr><td colspan="5" class="empty-state">No data - Calculate window first</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="result-panel hidden" id="cut-table">
+                                <div class="table-container">
+                                    <table class="table">
+                                        <thead>
+                                            <tr>
+                                                <th>Element</th>
+                                                <th>Specification</th>
+                                                <th>Quantity</th>
+                                                <th>Notes</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="cut-body">
+                                            <tr><td colspan="4" class="empty-state">No data - Calculate window first</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="result-panel hidden" id="glazing-table">
+                                <div class="table-container">
+                                    <table class="table">
+                                        <thead>
+                                            <tr>
+                                                <th>Pane</th>
+                                                <th>Width (mm)</th>
+                                                <th>Height (mm)</th>
+                                                <th>Type</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="glazing-body">
+                                            <tr><td colspan="4" class="empty-state">No data - Calculate window first</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- PARTS LIBRARY SECTION -->
+                    <section id="section-parts" class="content-section hidden">
+                        <div class="card">
+                            <div class="card-header">
+                                <div>
+                                    <h2 class="card-title">Parts Library</h2>
+                                    <p class="card-subtitle">All components with technical details</p>
+                                </div>
+                            </div>
+                            <div id="parts-library-content">
+                                <p class="empty-state">No parts generated yet. Calculate a window to see parts details.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- SHOPPING LIST SECTION -->
+                    <section id="section-shopping" class="content-section hidden">
+                        <div class="card">
+                            <div class="card-header">
+                                <div>
+                                    <h2 class="card-title">Shopping List</h2>
+                                    <p class="card-subtitle">Materials grouped by category</p>
+                                </div>
+                                <button type="button" class="btn btn-primary export-btn" data-type="shopping">
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="7 10 12 15 17 10"></polyline>
+                                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                                    </svg>
+                                    Export CSV
+                                </button>
+                            </div>
+
+                            <div id="shopping-table">
+                                <div class="table-container">
+                                    <table class="table">
+                                        <thead>
+                                            <tr>
+                                                <th>Material</th>
+                                                <th>Specification</th>
+                                                <th>Quantity</th>
+                                                <th>Unit</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="shopping-body">
+                                            <tr><td colspan="4" class="empty-state">No data - Calculate window first</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- BATCH SECTION -->
+                    <section id="section-batch" class="content-section hidden">
+                        <div class="card">
+                            <div class="card-header">
+                                <div>
+                                    <h2 class="card-title">Batch Operations</h2>
+                                    <p class="card-subtitle">Manage multiple windows</p>
+                                </div>
+                                <div style="display: flex; gap: var(--space-3);">
+                                    <button id="batch-export-pdf" class="btn btn-primary">
+                                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                            <polyline points="14 2 14 8 20 8"></polyline>
+                                        </svg>
+                                        Export Batch PDF
+                                    </button>
+                                    <button id="batch-aggregate" class="btn btn-outline">Aggregate Shopping List</button>
+                                    <button id="batch-clear" class="btn btn-danger">Clear Batch</button>
+                                </div>
+                            </div>
+
+                            <div id="batch-list" style="display: grid; gap: var(--space-3); margin-top: var(--space-4);">
+                                <p class="empty-state">No windows in batch</p>
+                            </div>
+
+                            <div style="margin-top: var(--space-6);">
+                                <h3 style="font-size: var(--text-lg); font-weight: 600; margin-bottom: var(--space-4);">Aggregate Shopping List</h3>
+                                <div id="batch-aggregate-list">
+                                    <p class="empty-state">No items to display</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Initialize Lucide icons (lightweight inline SVG icons)
+        // Navigation functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Mobile menu toggle
+            const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+            const sidebar = document.getElementById('app-sidebar');
+
+            if (mobileMenuToggle) {
+                mobileMenuToggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('is-open');
+                });
+            }
+
+            // Section navigation
+            const navItems = document.querySelectorAll('.nav-item');
+            const sections = document.querySelectorAll('.content-section');
+
+            navItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    const targetSection = this.dataset.section;
+
+                    // Update active nav item
+                    navItems.forEach(nav => nav.classList.remove('is-active'));
+                    this.classList.add('is-active');
+
+                    // Show target section
+                    sections.forEach(section => {
+                        if (section.id === 'section-' + targetSection) {
+                            section.classList.remove('hidden');
+                        } else {
+                            section.classList.add('hidden');
+                        }
+                    });
+
+                    // Close mobile menu
+                    if (window.innerWidth < 768) {
+                        sidebar.classList.remove('is-open');
+                    }
+                });
+            });
+
+            // Tab navigation
+            const tabs = document.querySelectorAll('.result-tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const target = this.dataset.target;
+
+                    // Update active tab
+                    tabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+
+                    // Show target panel
+                    const panels = document.querySelectorAll('.result-panel');
+                    panels.forEach(panel => {
+                        if (panel.id === target) {
+                            panel.classList.remove('hidden');
+                        } else {
+                            panel.classList.add('hidden');
+                        }
+                    });
+                });
+            });
+
+            // Custom configuration toggle
+            const configSelect = document.getElementById('configuration');
+            const customConfigGroup = document.getElementById('custom-config-group');
+
+            if (configSelect) {
+                configSelect.addEventListener('change', function() {
+                    if (this.value === 'custom') {
+                        customConfigGroup.classList.remove('hidden');
+                    } else {
+                        customConfigGroup.classList.add('hidden');
+                    }
+                });
+            }
+        });
+    </script>
 
     <script src="js/calculations.js" type="module"></script>
     <script src="js/renderer.js" type="module"></script>
