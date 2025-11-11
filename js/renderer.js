@@ -1,250 +1,233 @@
-/**
- * renderer.js - ETAP 3
- * Canvas renderer with zoom/pan support for all sash window configurations.
- */
+import { CONSTANTS, deriveWindowData } from './calculations.js';
 
-import { CONSTANTS } from './calculations.js';
-
-let panzoomInstance = null;
+let panzoom = null;
+const canvas = document.getElementById('window-canvas');
+const overlay = document.getElementById('bars-overlay');
 
 class CanvasPanzoom {
-    constructor(canvas, options = {}) {
-        this.canvas = canvas;
-        this.options = Object.assign({
-            maxScale: 4,
-            minScale: 0.4,
-            step: 0.1
-        }, options);
+  constructor(element) {
+    this.element = element;
+    this.scale = 1;
+    this.translateX = 0;
+    this.translateY = 0;
+    this.isDragging = false;
+    this.lastPointer = { x: 0, y: 0 };
+    this.step = 0.1;
+    this.minScale = 0.4;
+    this.maxScale = 3;
 
-        this.scale = 1;
-        this.translateX = 0;
-        this.translateY = 0;
-        this.isDragging = false;
-        this.lastPointer = { x: 0, y: 0 };
+    this.onWheel = this.onWheel.bind(this);
+    this.onPointerDown = this.onPointerDown.bind(this);
+    this.onPointerMove = this.onPointerMove.bind(this);
+    this.onPointerUp = this.onPointerUp.bind(this);
 
-        this.handleWheel = this.handleWheel.bind(this);
-        this.handlePointerDown = this.handlePointerDown.bind(this);
-        this.handlePointerMove = this.handlePointerMove.bind(this);
-        this.handlePointerUp = this.handlePointerUp.bind(this);
+    element.style.touchAction = 'none';
+    element.addEventListener('wheel', this.onWheel, { passive: false });
+    element.addEventListener('pointerdown', this.onPointerDown);
+    element.addEventListener('pointermove', this.onPointerMove);
+    element.addEventListener('pointerup', this.onPointerUp);
+    element.addEventListener('pointerleave', this.onPointerUp);
+  }
 
-        this.canvas.style.touchAction = 'none';
-        this.canvas.style.transformOrigin = 'center center';
-        this.canvas.style.cursor = 'grab';
-        this.canvas.style.willChange = 'transform';
+  dispose() {
+    this.element.removeEventListener('wheel', this.onWheel);
+    this.element.removeEventListener('pointerdown', this.onPointerDown);
+    this.element.removeEventListener('pointermove', this.onPointerMove);
+    this.element.removeEventListener('pointerup', this.onPointerUp);
+    this.element.removeEventListener('pointerleave', this.onPointerUp);
+    this.element.style.transform = '';
+  }
 
-        this.canvas.addEventListener('wheel', this.handleWheel, { passive: false });
-        this.canvas.addEventListener('pointerdown', this.handlePointerDown);
-        this.canvas.addEventListener('pointerup', this.handlePointerUp);
-        this.canvas.addEventListener('pointercancel', this.handlePointerUp);
-        this.canvas.addEventListener('pointerleave', this.handlePointerUp);
-        this.canvas.addEventListener('pointermove', this.handlePointerMove);
-    }
+  apply() {
+    this.element.style.transform = `translate(${this.translateX}px, ${this.translateY}px) scale(${this.scale})`;
+  }
 
-    dispose() {
-        this.canvas.removeEventListener('wheel', this.handleWheel);
-        this.canvas.removeEventListener('pointerdown', this.handlePointerDown);
-        this.canvas.removeEventListener('pointerup', this.handlePointerUp);
-        this.canvas.removeEventListener('pointercancel', this.handlePointerUp);
-        this.canvas.removeEventListener('pointerleave', this.handlePointerUp);
-        this.canvas.removeEventListener('pointermove', this.handlePointerMove);
-        this.isDragging = false;
-        this.lastPointer = { x: 0, y: 0 };
-        this.canvas.style.cursor = '';
-        this.canvas.style.transform = '';
-        this.canvas.style.willChange = '';
-        this.canvas.style.touchAction = '';
-    }
+  onWheel(event) {
+    event.preventDefault();
+    const direction = event.deltaY > 0 ? -1 : 1;
+    const next = Math.min(this.maxScale, Math.max(this.minScale, this.scale + direction * this.step));
+    this.scale = next;
+    this.apply();
+  }
 
-    clampScale(value) {
-        return Math.min(this.options.maxScale, Math.max(this.options.minScale, value));
-    }
+  onPointerDown(event) {
+    if (event.button !== 0) return;
+    this.isDragging = true;
+    this.lastPointer = { x: event.clientX, y: event.clientY };
+    this.element.setPointerCapture?.(event.pointerId);
+  }
 
-    applyTransform() {
-        this.canvas.style.transform = `translate(${this.translateX}px, ${this.translateY}px) scale(${this.scale})`;
-    }
+  onPointerMove(event) {
+    if (!this.isDragging) return;
+    const dx = event.clientX - this.lastPointer.x;
+    const dy = event.clientY - this.lastPointer.y;
+    this.translateX += dx;
+    this.translateY += dy;
+    this.lastPointer = { x: event.clientX, y: event.clientY };
+    this.apply();
+  }
 
-    handleWheel(event) {
-        event.preventDefault();
-        const direction = event.deltaY > 0 ? -1 : 1;
-        const delta = this.options.step * direction;
-        const newScale = this.scale * (1 + delta);
-        this.scale = this.clampScale(newScale);
-        this.applyTransform();
-    }
-
-    handlePointerDown(event) {
-        if (typeof event.button === 'number' && event.button !== 0) {
-            return;
-        }
-        this.isDragging = true;
-        this.lastPointer = { x: event.clientX, y: event.clientY };
-        if (this.canvas.setPointerCapture) {
-            try {
-                this.canvas.setPointerCapture(event.pointerId);
-            } catch (error) {
-                // Ignore capture errors
-            }
-        }
-        this.canvas.style.cursor = 'grabbing';
-    }
-
-    handlePointerMove(event) {
-        if (!this.isDragging) return;
-        const dx = event.clientX - this.lastPointer.x;
-        const dy = event.clientY - this.lastPointer.y;
-        this.translateX += dx;
-        this.translateY += dy;
-        this.lastPointer = { x: event.clientX, y: event.clientY };
-        this.applyTransform();
-    }
-
-    handlePointerUp(event) {
-        this.isDragging = false;
-        if (this.canvas.releasePointerCapture) {
-            try {
-                this.canvas.releasePointerCapture(event.pointerId);
-            } catch (error) {
-                // Ignore release errors
-            }
-        }
-        this.canvas.style.cursor = 'grab';
-    }
-
-    zoomIn() {
-        const newScale = this.scale * (1 + this.options.step);
-        this.scale = this.clampScale(newScale);
-        this.applyTransform();
-    }
-
-    zoomOut() {
-        const newScale = this.scale / (1 + this.options.step);
-        this.scale = this.clampScale(newScale);
-        this.applyTransform();
-    }
-
-    reset() {
-        this.scale = 1;
-        this.translateX = 0;
-        this.translateY = 0;
-        this.applyTransform();
-    }
+  onPointerUp(event) {
+    this.isDragging = false;
+    this.element.releasePointerCapture?.(event.pointerId);
+  }
 }
 
-export function initRenderer(canvas) {
-    if (!canvas) return;
-    if (panzoomInstance) {
-        panzoomInstance.dispose();
-    }
-    panzoomInstance = new CanvasPanzoom(canvas, {
-        maxScale: 4,
-        minScale: 0.4,
-        step: 0.1
-    });
+function ensurePanzoom() {
+  if (canvas && !panzoom) {
+    panzoom = new CanvasPanzoom(canvas);
+  }
 }
 
-export function getPanzoomInstance() {
-    return panzoomInstance;
+function clearCanvas() {
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
-export function renderWindow(canvas, windowData) {
-    if (!canvas || !windowData) return;
-
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    const frameW = windowData.frame.width;
-    const frameH = windowData.frame.height;
-    const maxDim = Math.max(frameW, frameH);
-    if (maxDim <= 0) return;
-
-    const scale = Math.min(canvas.width * 0.8, canvas.height * 0.8) / maxDim;
-    const offsetX = (canvas.width - frameW * scale) / 2;
-    const offsetY = (canvas.height - frameH * scale) / 2;
-
-    drawFrame(ctx, offsetX, offsetY, frameW * scale, frameH * scale);
-
-    const sashW = windowData.sash.width * scale;
-    const sashH = windowData.sash.height * scale;
-    const sashOffsetX = offsetX + (frameW * scale - sashW) / 2;
-    const sashOffsetY = offsetY + (frameH * scale - sashH) / 2;
-    drawSash(ctx, sashOffsetX, sashOffsetY, sashW, sashH);
-
-    if (windowData.components?.sash?.glazingBars) {
-        drawGlazingBars(
-            ctx,
-            sashOffsetX,
-            sashOffsetY,
-            sashW,
-            sashH,
-            windowData.components.sash.glazingBars,
-            scale
-        );
-    }
-
-    drawDimensions(ctx, offsetX, offsetY, frameW * scale, frameH * scale, frameW, frameH);
+function clearOverlay() {
+  if (overlay) {
+    overlay.innerHTML = '';
+  }
 }
 
 function drawFrame(ctx, x, y, w, h) {
-    ctx.strokeStyle = '#2c3e50';
-    ctx.lineWidth = 4;
-    ctx.fillStyle = '#ecf0f1';
-    ctx.fillRect(x, y, w, h);
-    ctx.strokeRect(x, y, w, h);
+  ctx.fillStyle = '#f8fafc';
+  ctx.strokeStyle = '#1e293b';
+  ctx.lineWidth = 4;
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeRect(x, y, w, h);
 }
 
 function drawSash(ctx, x, y, w, h) {
-    ctx.strokeStyle = '#34495e';
-    ctx.lineWidth = 3;
-    ctx.fillStyle = '#bdc3c7';
-    ctx.fillRect(x, y, w, h);
-    ctx.strokeRect(x, y, w, h);
+  ctx.fillStyle = '#e2e8f0';
+  ctx.strokeStyle = '#0f172a';
+  ctx.lineWidth = 3;
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeRect(x, y, w, h);
 }
 
-function drawGlazingBars(ctx, sashX, sashY, sashW, sashH, glazingBars, scale) {
-    const stileWidth = CONSTANTS.STILE_WIDTH * scale;
-    const topRailWidth = CONSTANTS.TOP_RAIL_WIDTH * scale;
-    const bottomRailWidth = CONSTANTS.BOTTOM_RAIL_WIDTH * scale;
+function drawBars(ctx, sashRect, bars, scale) {
+  const stileWidth = CONSTANTS.STILE_WIDTH * scale;
+  const topRail = CONSTANTS.TOP_RAIL_WIDTH * scale;
+  const bottomRail = CONSTANTS.BOTTOM_RAIL_WIDTH * scale;
+  const glazing = {
+    x: sashRect.x + stileWidth,
+    y: sashRect.y + topRail,
+    w: sashRect.w - 2 * stileWidth,
+    h: sashRect.h - topRail - bottomRail,
+  };
 
-    const glazingX = sashX + stileWidth;
-    const glazingY = sashY + topRailWidth;
-    const glazingW = sashW - 2 * stileWidth;
-    const glazingH = sashH - topRailWidth - bottomRailWidth;
+  ctx.fillStyle = 'rgba(148, 163, 184, 0.35)';
+  ctx.strokeStyle = '#1e293b';
+  ctx.lineWidth = 1.2;
+  ctx.fillRect(glazing.x, glazing.y, glazing.w, glazing.h);
+  ctx.strokeRect(glazing.x, glazing.y, glazing.w, glazing.h);
 
-    ctx.fillStyle = 'rgba(147, 197, 253, 0.28)';
-    ctx.strokeStyle = '#0f172a';
-    ctx.lineWidth = 1.5;
-    ctx.fillRect(glazingX, glazingY, glazingW, glazingH);
-    ctx.strokeRect(glazingX, glazingY, glazingW, glazingH);
+  const barWidth = CONSTANTS.GLAZING_BAR_WIDTH * scale;
+  ctx.fillStyle = '#0f172a';
 
-    ctx.fillStyle = '#1f2937';
+  bars.vertical.forEach((pos) => {
+    const x = glazing.x + pos * scale - barWidth / 2;
+    ctx.fillRect(x, glazing.y, barWidth, glazing.h);
+  });
 
-    if (glazingBars.vertical?.positions?.length) {
-        glazingBars.vertical.positions.forEach((pos) => {
-            const width = glazingBars.vertical.width * scale;
-            const x = glazingX + pos * scale - width / 2;
-            ctx.fillRect(x, glazingY, width, glazingH);
-        });
-    }
-
-    if (glazingBars.horizontal?.positions?.length) {
-        glazingBars.horizontal.positions.forEach((pos) => {
-            const height = glazingBars.horizontal.width * scale;
-            const y = glazingY + pos * scale - height / 2;
-            ctx.fillRect(glazingX, y, glazingW, height);
-        });
-    }
+  bars.horizontal.forEach((pos) => {
+    const y = glazing.y + pos * scale - barWidth / 2;
+    ctx.fillRect(glazing.x, y, glazing.w, barWidth);
+  });
 }
 
-function drawDimensions(ctx, x, y, w, h, actualW, actualH) {
-    ctx.fillStyle = '#e74c3c';
-    ctx.font = 'bold 14px Arial';
-    ctx.textAlign = 'center';
+function drawDimensions(ctx, rect, actual) {
+  ctx.fillStyle = '#ef4444';
+  ctx.font = '12px Inter, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${Math.round(actual.width)} mm`, rect.x + rect.w / 2, rect.y - 8);
+  ctx.save();
+  ctx.translate(rect.x - 14, rect.y + rect.h / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText(`${Math.round(actual.height)} mm`, 0, 0);
+  ctx.restore();
+}
 
-    ctx.fillText(`${Math.round(actualW)}mm`, x + w / 2, y - 10);
+function buildBars(windowSpec, derived) {
+  if (windowSpec.sash.grid.mode === 'custom') {
+    return {
+      vertical: windowSpec.sash.grid.customBars.vertical ?? [],
+      horizontal: windowSpec.sash.grid.customBars.horizontal ?? [],
+    };
+  }
+  return {
+    vertical: derived.barPositions.vertical ?? [],
+    horizontal: derived.barPositions.horizontal ?? [],
+  };
+}
 
-    ctx.save();
-    ctx.translate(x - 15, y + h / 2);
-    ctx.rotate(-Math.PI / 2);
-    ctx.fillText(`${Math.round(actualH)}mm`, 0, 0);
-    ctx.restore();
+function renderHandles(bars, sashRect, scale) {
+  if (!overlay) return;
+  overlay.innerHTML = '';
+  const stileWidth = CONSTANTS.STILE_WIDTH * scale;
+  const topRail = CONSTANTS.TOP_RAIL_WIDTH * scale;
+  const glazing = {
+    x: sashRect.x + stileWidth,
+    y: sashRect.y + topRail,
+    w: sashRect.w - 2 * stileWidth,
+    h: sashRect.h - topRail - CONSTANTS.BOTTOM_RAIL_WIDTH * scale,
+  };
+  const createHandle = (orientation, index, position) => {
+    const handle = document.createElement('div');
+    handle.className = 'absolute h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border border-slate-300 bg-white shadow';
+    handle.style.pointerEvents = 'none';
+    if (orientation === 'vertical') {
+      const x = glazing.x + position * scale;
+      handle.style.left = `${(x / canvas.width) * 100}%`;
+      handle.style.top = `${((glazing.y + glazing.h / 2) / canvas.height) * 100}%`;
+    } else {
+      const y = glazing.y + position * scale;
+      handle.style.left = `${((glazing.x + glazing.w / 2) / canvas.width) * 100}%`;
+      handle.style.top = `${(y / canvas.height) * 100}%`;
+    }
+    overlay.appendChild(handle);
+  };
+
+  bars.vertical.forEach((pos, index) => createHandle('vertical', index, pos));
+  bars.horizontal.forEach((pos, index) => createHandle('horizontal', index, pos));
+}
+
+export function renderWindowPreview(windowSpec, settings = {}) {
+  ensurePanzoom();
+  if (!canvas || !windowSpec) return;
+  const ctx = canvas.getContext('2d');
+  clearCanvas();
+  clearOverlay();
+
+  const frameWidth = Number(windowSpec.frame?.width ?? 0);
+  const frameHeight = Number(windowSpec.frame?.height ?? 0);
+  if (!frameWidth || !frameHeight) return;
+
+  const derived = deriveWindowData(windowSpec, settings);
+  const maxDim = Math.max(frameWidth, frameHeight);
+  if (!maxDim) return;
+
+  const scale = Math.min((canvas.width * 0.7) / maxDim, (canvas.height * 0.7) / maxDim);
+  const offsetX = (canvas.width - frameWidth * scale) / 2;
+  const offsetY = (canvas.height - frameHeight * scale) / 2;
+
+  const frameRect = { x: offsetX, y: offsetY, w: frameWidth * scale, h: frameHeight * scale };
+  drawFrame(ctx, frameRect.x, frameRect.y, frameRect.w, frameRect.h);
+
+  const sashWidth = derived.sashWidth * scale;
+  const sashHeight = derived.sashHeight * scale;
+  const sashRect = {
+    x: offsetX + (frameRect.w - sashWidth) / 2,
+    y: offsetY + (frameRect.h - sashHeight) / 2,
+    w: sashWidth,
+    h: sashHeight,
+  };
+  drawSash(ctx, sashRect.x, sashRect.y, sashRect.w, sashRect.h);
+
+  const bars = buildBars(windowSpec, derived);
+  drawBars(ctx, sashRect, bars, scale);
+  renderHandles(bars, sashRect, scale);
+  drawDimensions(ctx, frameRect, { width: frameWidth, height: frameHeight });
 }

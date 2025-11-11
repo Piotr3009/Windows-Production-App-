@@ -4,6 +4,8 @@
 
 const STORAGE_KEY = 'sash_window_projects';
 const CURRENT_PROJECT_KEY = 'sash_window_current';
+const SNAPSHOT_KEY = 'sash_planner_snapshot';
+const hasStorage = typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
 
 function safeParse(json, fallback) {
     try {
@@ -29,8 +31,10 @@ export function saveProject(projectData) {
     };
 
     projects[projectId] = dataToStore;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
-    localStorage.setItem(CURRENT_PROJECT_KEY, projectId);
+    if (hasStorage) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+        localStorage.setItem(CURRENT_PROJECT_KEY, projectId);
+    }
 
     return projectId;
 }
@@ -42,6 +46,7 @@ export function loadProject(projectId) {
 }
 
 export function getAllProjects() {
+    if (!hasStorage) return {};
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return {};
     return safeParse(raw, {});
@@ -51,17 +56,32 @@ export function deleteProject(projectId) {
     const projects = getAllProjects();
     if (projects[projectId]) {
         delete projects[projectId];
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+        if (hasStorage) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+        }
     }
 
-    if (localStorage.getItem(CURRENT_PROJECT_KEY) === projectId) {
+    if (hasStorage && localStorage.getItem(CURRENT_PROJECT_KEY) === projectId) {
         localStorage.removeItem(CURRENT_PROJECT_KEY);
     }
 }
 
 export function getCurrentProject() {
+    if (!hasStorage) return null;
     const projectId = localStorage.getItem(CURRENT_PROJECT_KEY);
     return projectId ? loadProject(projectId) : null;
+}
+
+export function persistStateSnapshot(snapshot) {
+    if (!snapshot || !hasStorage) return;
+    localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snapshot));
+}
+
+export function loadStateSnapshot() {
+    if (!hasStorage) return null;
+    const raw = localStorage.getItem(SNAPSHOT_KEY);
+    if (!raw) return null;
+    return safeParse(raw, null);
 }
 
 export function exportProjectToFile(projectData) {

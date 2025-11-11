@@ -148,6 +148,226 @@ export function calculateWindow(frameWidth, frameHeight, configuration = '2x2', 
     };
 }
 
+function parseSection(section) {
+    if (!section) return { width: null, height: null };
+    const normalised = section.replace(/×/g, 'x');
+    const parts = normalised.split('x').map((value) => Number(value.trim()));
+    return { width: parts[0] ?? null, height: parts[1] ?? null };
+}
+
+function round(value) {
+    return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+}
+
+function createComponentRecord(windowSpec, group, elementName, section, length, quantity = 1, notes = '') {
+    const sectionInfo = parseSection(section);
+    return {
+        windowId: windowSpec.id,
+        windowName: windowSpec.name,
+        group,
+        elementName,
+        section,
+        sizeLabel: section,
+        finishedWidth: sectionInfo.height ?? sectionInfo.width ?? null,
+        thickness: sectionInfo.width ?? null,
+        length: round(length),
+        quantity,
+        notes,
+    };
+}
+
+function calculateSashComponentSet(windowSpec, settings, sashWidth, sashHeight) {
+    const halfHeight = sashHeight / 2;
+    const hornExtra = windowSpec.sash?.horns ? Number(windowSpec.sash?.hornExtension ?? settings.hornExtensionDefault) : 0;
+    const meetingLength = sashWidth;
+
+    const topSashHeight = halfHeight;
+    const bottomSashHeight = halfHeight;
+
+    const sashComponents = [];
+    sashComponents.push(createComponentRecord(windowSpec, 'sash', 'TOP RAIL', '57x57', meetingLength, 1));
+    sashComponents.push(createComponentRecord(windowSpec, 'sash', 'STILES TOP SASH (L)', '57x57', topSashHeight + hornExtra, 1));
+    sashComponents.push(createComponentRecord(windowSpec, 'sash', 'STILES TOP SASH (R)', '57x57', topSashHeight + hornExtra, 1));
+    sashComponents.push(createComponentRecord(windowSpec, 'sash', 'TOP MEET RAIL', '57x43', meetingLength, 1));
+    sashComponents.push(createComponentRecord(windowSpec, 'sash', 'BOTTOM MEET RAIL', '57x43', meetingLength, 1));
+    sashComponents.push(createComponentRecord(windowSpec, 'sash', 'STILES BOTTOM SASH (L)', '57x57', bottomSashHeight + hornExtra, 1));
+    sashComponents.push(createComponentRecord(windowSpec, 'sash', 'STILES BOTTOM SASH (R)', '57x57', bottomSashHeight + hornExtra, 1));
+    sashComponents.push(createComponentRecord(windowSpec, 'sash', 'BOTTOM RAIL', '57x90', meetingLength, 1));
+
+    return sashComponents;
+}
+
+function calculateBoxComponentSet(windowSpec, frameWidth, frameHeight) {
+    const cillExtension = Number(windowSpec.cill?.extension ?? 0);
+    const headLength = frameWidth;
+    const jambLength = frameHeight;
+
+    const boxComponents = [];
+    boxComponents.push(createComponentRecord(windowSpec, 'box', 'HEAD', '28x141', headLength, 1));
+    boxComponents.push(createComponentRecord(windowSpec, 'box', 'CILL', '69x46', headLength + cillExtension, 1, `Extension ${cillExtension}mm`));
+    boxComponents.push(createComponentRecord(windowSpec, 'box', 'CILL NOSE', '28x141', headLength + cillExtension, 1));
+    boxComponents.push(createComponentRecord(windowSpec, 'box', 'JAMB LEFT', '28x141', jambLength, 1));
+    boxComponents.push(createComponentRecord(windowSpec, 'box', 'JAMB RIGHT', '28x141', jambLength, 1));
+    boxComponents.push(createComponentRecord(windowSpec, 'box', 'INTERNAL HEAD LINER', '17x86', headLength, 1));
+    boxComponents.push(createComponentRecord(windowSpec, 'box', 'EXTERNAL HEAD LINER', '17x102', headLength, 1));
+    boxComponents.push(createComponentRecord(windowSpec, 'box', 'INTERNAL JAMB LINER (L)', '17x86', jambLength, 1));
+    boxComponents.push(createComponentRecord(windowSpec, 'box', 'INTERNAL JAMB LINER (R)', '17x86', jambLength, 1));
+    boxComponents.push(createComponentRecord(windowSpec, 'box', 'EXTERNAL JAMB LINER (L)', '17x102', jambLength, 1));
+    boxComponents.push(createComponentRecord(windowSpec, 'box', 'EXTERNAL JAMB LINER (R)', '17x102', jambLength, 1));
+
+    return boxComponents;
+}
+
+function calculateGlazingSummaryForWindow(windowSpec, sashWidth, sashHeight, settings) {
+    const grid = windowSpec.sash?.grid ?? { rows: 2, cols: 2 };
+    const clearWidth = Math.max(sashWidth - 2 * CONSTANTS.STILE_WIDTH, 0);
+    const clearHeight = Math.max((sashHeight / 2) - CONSTANTS.TOP_RAIL_WIDTH - CONSTANTS.BOTTOM_RAIL_WIDTH, 0);
+
+    const paneWidth = Math.max(
+        clearWidth / Math.max(grid.cols ?? 1, 1) - settings.glazingAllowanceWidth,
+        0,
+    );
+    const paneHeight = Math.max(
+        clearHeight / Math.max(grid.rows ?? 1, 1) - settings.glazingAllowanceHeight,
+        0,
+    );
+
+    return {
+        windowId: windowSpec.id,
+        windowName: windowSpec.name,
+        width: round(paneWidth),
+        height: round(paneHeight),
+        rows: grid.rows,
+        cols: grid.cols,
+        panes: Math.max((grid.rows ?? 1) * (grid.cols ?? 1), 1) * 2,
+        thickness: Number(windowSpec.glazing?.thickness ?? 0),
+        makeup: windowSpec.glazing?.makeup ?? '',
+        toughened: Boolean(windowSpec.glazing?.toughened),
+        frosted: Boolean(windowSpec.glazing?.frosted),
+        spacerColour: windowSpec.glazing?.spacerColour ?? 'White',
+    };
+}
+
+export function deriveWindowData(windowSpec, settings = {}) {
+    const frameWidth = Number(windowSpec.frame?.width ?? 0);
+    const frameHeight = Number(windowSpec.frame?.height ?? 0);
+    const gridMode = windowSpec.sash?.grid?.mode ?? '2x2';
+
+    const config = resolveConfiguration(gridMode, windowSpec.sash?.grid ?? {});
+    const sashWidth = frameWidth - CONSTANTS.SASH_WIDTH_DEDUCTION;
+    const sashHeight = frameHeight - CONSTANTS.SASH_HEIGHT_DEDUCTION;
+
+    const sashComponents = calculateSashComponentSet(windowSpec, settings, sashWidth, sashHeight);
+    const boxComponents = calculateBoxComponentSet(windowSpec, frameWidth, frameHeight);
+    const glazingSummary = calculateGlazingSummaryForWindow(windowSpec, sashWidth, sashHeight, settings);
+
+    const result = calculateWindow(frameWidth, frameHeight, config.key, {
+        rows: config.rows,
+        cols: config.cols,
+    });
+
+    const barPositions = {
+        vertical: result.components.sash.glazingBars.vertical.positions,
+        horizontal: result.components.sash.glazingBars.horizontal.positions,
+    };
+
+    return {
+        sashWidth,
+        sashHeight,
+        config,
+        components: { sash: sashComponents, box: boxComponents },
+        glazingItems: [glazingSummary],
+        barPositions,
+    };
+}
+
+function aggregateComponents(windows, settings) {
+    const sash = [];
+    const box = [];
+    const glazing = [];
+
+    windows.forEach((windowSpec) => {
+        const derived = deriveWindowData(windowSpec, settings);
+        sash.push(...derived.components.sash);
+        box.push(...derived.components.box);
+        glazing.push(...derived.glazingItems);
+    });
+
+    return { sash, box, glazing };
+}
+
+function aggregateCutList(components) {
+    const grouped = new Map();
+    components.forEach((component) => {
+        const key = `${component.windowId}-${component.elementName}-${component.section}-${component.length}`;
+        if (!grouped.has(key)) {
+            grouped.set(key, { ...component });
+        } else {
+            grouped.get(key).quantity += component.quantity;
+        }
+    });
+    return Array.from(grouped.values());
+}
+
+function buildSashPrecut(components, settings) {
+    const bySection = new Map();
+    components.forEach((component) => {
+        const rawSection = settings.sectionMap[component.section] ?? settings.sectionMap['57x57'];
+        if (!rawSection) return;
+        if (!bySection.has(rawSection)) {
+            bySection.set(rawSection, []);
+        }
+        bySection.get(rawSection).push({
+            elementName: component.elementName,
+            length: component.length,
+            quantity: component.quantity,
+            windowId: component.windowId,
+            windowName: component.windowName,
+        });
+    });
+
+    return Array.from(bySection.entries()).map(([section, items]) => ({ section, items }));
+}
+
+function buildBoxPrecut(components, windowSpecList, settings) {
+    const allowance = settings.boxWidthAllowance ?? 20;
+    const grouped = new Map();
+    components.forEach((component) => {
+        if (component.finishedWidth == null) return;
+        const widthWithAllowance = component.finishedWidth + allowance;
+        if (!grouped.has(widthWithAllowance)) {
+            grouped.set(widthWithAllowance, []);
+        }
+        grouped.get(widthWithAllowance).push({
+            elementName: component.elementName,
+            length: component.length,
+            quantity: component.quantity,
+            windowId: component.windowId,
+            windowName: component.windowName,
+        });
+    });
+    return Array.from(grouped.entries()).map(([preCutWidth, items]) => ({ preCutWidth, items }));
+}
+
+export function summariseProjectWindows(windows, settings) {
+    const { sash, box, glazing } = aggregateComponents(windows, settings);
+    const cutLists = {
+        sash: aggregateCutList(sash),
+        box: aggregateCutList(box),
+    };
+
+    const precut = {
+        sashEngineering: buildSashPrecut(sash, settings),
+        boxSapele: buildBoxPrecut(box, windows, settings),
+    };
+
+    return {
+        cutLists,
+        precut,
+        glazing,
+    };
+}
+
 function resolveConfiguration(configuration, options) {
     if (CONFIGURATIONS[configuration]) {
         if (configuration !== 'custom') {
