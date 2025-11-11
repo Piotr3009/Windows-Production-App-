@@ -19,19 +19,41 @@ Aplikacja webowa do projektowania okien skrzyniowych i generowania list produkcy
 ✅ Integracja frontendu z backendem (fetch JSON → PDF download)
 
 ## Jak używać:
-1. Uruchom frontend (np. Live Server w VS Code) i otwórz `index.html`.
-2. W osobnym terminalu uruchom backend:
-   ```bash
-   cd backend
-   python -m venv venv
-   source venv/bin/activate  # lub venv\Scripts\activate na Windows
-   pip install -r requirements.txt
-   python -m app.main
-   ```
-3. Wprowadź Frame Width i Frame Height.
-4. Wybierz konfigurację (2x2) i opcje.
-5. Kliknij "Calculate" i przejrzyj wyniki w zakładkach.
-6. Exportuj listy do CSV lub kliknij "Export PDF" aby pobrać raport z backendu.
+
+### Szybki start (zalecane):
+
+#### Linux/Mac:
+```bash
+# 1. Uruchom backend
+chmod +x start_backend.sh
+./start_backend.sh
+```
+
+#### Windows:
+```cmd
+# 1. Uruchom backend
+start_backend.bat
+```
+
+### 2. Uruchom frontend:
+Po uruchomieniu backendu, otwórz plik `index.html` w przeglądarce lub użyj Live Server w VS Code.
+
+Backend będzie dostępny pod adresem: http://localhost:8000
+
+### Ręczne uruchomienie backendu:
+Jeśli skrypty startowe nie działają, możesz uruchomić backend ręcznie:
+```bash
+cd backend
+python3 -m pip install -r requirements.txt
+python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+### 3. Korzystanie z aplikacji:
+1. Dodaj komponenty używając przycisku "Add Component"
+2. Skonfiguruj parametry optymalizacji w zakładce "Pre-Pre Cut"
+3. Uruchom optymalizację klikając "Run Optimization"
+4. Generuj raporty w zakładce "Reports"
+5. Eksportuj do PDF lub Excel używając przycisków w nagłówku
 
 ## Testowane wymiary:
 - Minimum: 400x600mm
@@ -64,11 +86,18 @@ js/export.js         # CSV + PDF export
 output/              # Wygenerowane pliki PDF
 ```
 
-## TODO ETAP 2:
-- DXF export (opcjonalnie)
+## Funkcje ETAP 3:
+✅ Konfiguracje 2x2, 3x3, 4x4, 6x6, 9x9, custom
+✅ Save/Load projects (SQLite database)
+✅ Excel export (openpyxl)
+✅ Database integration
+✅ Professional UI with workshop theme
+✅ Component drawings in SVG
+✅ Optimization with Best-Fit Decreasing heuristic
+✅ PDF and Excel report generation
 
-## TODO ETAP 3:
-- Konfiguracje 3x3, 4x4, 6x6, 9x9
-- Save/Load projects
-- Excel export
-- Database integration
+## TODO:
+- DXF export (opcjonalnie)
+- OR-Tools integration for exact optimization
+- Multi-project management UI
+- Project templates
