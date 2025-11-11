@@ -1,180 +1,210 @@
-import { calculateWindow } from './calculations.js';
-import { exportExcel, exportPdf, runOptimization, saveProject } from './api.js';
-import { buildOptimizationRequest } from './optimizer.js';
+import { deriveWindowData, summariseProjectWindows } from './calculations.js';
+import { optimisePrecut } from './optimizer.js';
 import {
-  addComponent,
-  setComponents,
-  setOptimization,
+  addWindow,
+  finishProject,
+  removeWindow,
+  resetCurrentWindow,
+  selectWindow,
+  setDerivedData,
+  setActiveView,
   state,
-  updateProject,
+  subscribe,
+  updateCurrentWindow,
+  updateProjectInfo,
   updateSettings,
 } from './state.js';
-import {
-  bindGlobalControls,
-  initComponentActions,
-  initNavigation,
-  initialiseUI,
-  updateStatus,
-} from './ui.js';
-import { componentToSVG } from './drawings.js';
+import { renderWindowPreview } from './renderer.js';
+import { initUI } from './ui.js';
 
-function transformCalculationToComponents(calculation) {
-  const components = [];
-  const push = (source, typePrefix) => {
-    Object.entries(source).forEach(([key, value]) => {
-      if (!value || typeof value !== 'object' || !('length' in value)) return;
-      components.push({
-        id: `${typePrefix}-${key}`.toUpperCase(),
-        type: key,
-        section: value.section || `${value.width}x${value.width}`,
-        material: value.material || 'Softwood',
-        width: value.width,
-        thickness: value.width,
-        length: Math.round(value.length),
-        quantity: value.quantity || 1,
-        drawing: componentToSVG({
-          id: `${typePrefix}-${key}`.toUpperCase(),
-          length: Math.round(value.length),
-          section: value.section,
-        }),
-      });
-    });
-  };
+const projectLabel = document.getElementById('active-project-label');
+const statusText = document.getElementById('status-text');
+const timestamp = document.getElementById('timestamp');
 
-  push(calculation.components.frame, 'frame');
-  push(calculation.components.sash, 'sash');
-
-  return components;
-}
-
-function seedDemoData() {
-  const calculation = calculateWindow(1450, 1600, '2x2');
-  const components = transformCalculationToComponents(calculation);
-  setComponents(components);
-  updateProject({ payload: { configuration: calculation.configuration } });
-}
-
-async function handleAddComponent() {
-  const id = prompt('Component ID (e.g. SASH-1001)');
-  if (!id) return;
-  const length = Number(prompt('Length (mm)', '1000')) || 0;
-  const quantity = Number(prompt('Quantity', '1')) || 1;
-  const section = prompt('Section', '63x63') || '63x63';
-  const type = prompt('Type', 'custom_component') || 'custom_component';
-  const material = prompt('Material', 'Softwood') || 'Softwood';
-
-  addComponent({
-    id,
-    type,
-    section,
-    material,
-    width: Number(section.split('x')[0]) || 63,
-    thickness: Number(section.split('x')[1]) || 63,
-    length,
-    quantity,
-    drawing: componentToSVG({ id, length, section }),
+function buildPatchFromPath(path, value) {
+  const segments = path.split('.');
+  const patch = {};
+  let cursor = patch;
+  segments.forEach((segment, index) => {
+    if (index === segments.length - 1) {
+      cursor[segment] = value;
+    } else {
+      cursor[segment] = {};
+      cursor = cursor[segment];
+    }
   });
-  updateStatus(`Component ${id} added.`);
+  return patch;
 }
 
-async function handleOptimization() {
-  if (!state.project.payload.components.length) {
-    updateStatus('Add components before optimising.');
-    return;
-  }
+function notifyStatus(message) {
+  statusText.textContent = message;
+  timestamp.textContent = new Date().toLocaleString();
+}
 
-  try {
-    updateStatus('Optimising stock usage…');
-    const request = buildOptimizationRequest();
-    const result = await runOptimization(request.components, request.configuration);
-    setOptimization(result);
-    updateStatus('Optimisation complete.');
-  } catch (error) {
-    updateStatus(error.message);
+function handleProjectChange(field, value) {
+  updateProjectInfo({ [field]: value });
+  if (field === 'name') {
+    projectLabel.textContent = value || 'Nowy projekt';
   }
 }
 
-function handleToggleLabels(enabled) {
-  updateSettings({ labels: enabled });
-  updateStatus(`QR labels ${enabled ? 'enabled' : 'disabled'}.`);
+function handleWindowChange(path, value) {
+  updateCurrentWindow(buildPatchFromPath(path, value));
+  if (path === 'sash.grid.mode' && value !== 'custom') {
+    const [rows, cols] = value.split('x').map((num) => Number(num));
+    updateCurrentWindow({ sash: { grid: { rows, cols } } });
+  }
+  schedulePreview();
 }
 
-async function handleSaveProject() {
-  const payload = {
-    ...state.project,
-    payload: state.project.payload,
+function handleToggleRawSection(section, enabled) {
+  const next = state.currentWindow.materials.sashRaw.map((entry) =>
+    entry.section === section ? { ...entry, enabled } : entry,
+  );
+  updateCurrentWindow({ materials: { sashRaw: next } });
+}
+
+function createWindowPayload() {
+  const frameWidth = Number(state.currentWindow.frame.width);
+  const frameHeight = Number(state.currentWindow.frame.height);
+  if (!Number.isFinite(frameWidth) || frameWidth <= 0) {
+    throw new Error('Podaj poprawną szerokość ramy.');
+  }
+  if (!Number.isFinite(frameHeight) || frameHeight <= 0) {
+    throw new Error('Podaj poprawną wysokość ramy.');
+  }
+
+  const derived = deriveWindowData(state.currentWindow, state.settings);
+  return {
+    ...state.currentWindow,
+    components: derived.components,
+    glazingItems: derived.glazingItems,
+    sash: {
+      ...state.currentWindow.sash,
+      grid: {
+        ...state.currentWindow.sash.grid,
+        rows: derived.config.rows,
+        cols: derived.config.cols,
+      },
+    },
   };
+}
+
+function refreshDerivedData() {
+  const summary = summariseProjectWindows(state.project.windows, state.settings);
+  const optimization = optimisePrecut(summary.precut);
+  setDerivedData({ cutLists: summary.cutLists, precut: summary.precut, glazing: summary.glazing, optimization });
+}
+
+function schedulePreview() {
   try {
-    updateStatus('Saving project…');
-    const saved = await saveProject(payload);
-    updateProject(saved);
-    updateStatus('Project saved successfully.');
+    renderWindowPreview(state.currentWindow, state.settings);
   } catch (error) {
-    updateStatus(error.message);
+    console.warn('Preview rendering skipped', error);
   }
 }
 
-async function handleExportPdf() {
-  if (!state.project.project_id) {
-    await handleSaveProject();
-  }
-  const payload = {
-    project: state.project,
-    optimization: state.optimization,
-    include_drawings: state.settings.labels,
-  };
+function handleNewWindow() {
+  resetCurrentWindow();
+  schedulePreview();
+  notifyStatus('Przygotowano formularz nowego okna.');
+}
+
+function handleSaveWindow() {
   try {
-    updateStatus('Generating PDF report…');
-    await exportPdf(payload);
-    updateStatus('PDF exported.');
+    const payload = createWindowPayload();
+    addWindow(payload);
+    resetCurrentWindow();
+    refreshDerivedData();
+    notifyStatus('Okno zapisane do projektu.');
   } catch (error) {
-    updateStatus(error.message);
+    notifyStatus(error.message);
   }
 }
 
-async function handleExportExcel() {
-  if (!state.project.project_id) {
-    await handleSaveProject();
-  }
-  const payload = {
-    project: state.project,
-    optimization: state.optimization,
-    include_drawings: true,
-    workbook_name: `${state.project.name.replace(/\s+/g, '-')}.xlsx`,
-  };
-  try {
-    updateStatus('Preparing Excel workbook…');
-    await exportExcel(payload);
-    updateStatus('Excel exported.');
-  } catch (error) {
-    updateStatus(error.message);
-  }
+function handleFinishProject() {
+  finishProject();
+  refreshDerivedData();
+  setActiveView('precut');
+  notifyStatus('Projekt zakończony. Sprawdź zakładkę Pre-Cut.');
 }
 
-function bindHeaderActions() {
-  document.querySelector('[data-action="new-project"]').addEventListener('click', () => {
-    updateProject({
-      project_id: null,
-      name: prompt('Project name', 'Untitled Project') || 'Untitled Project',
-    });
-    updateStatus('New project initialised.');
+function handleSelectWindow(windowId) {
+  selectWindow(windowId);
+  schedulePreview();
+}
+
+function handleRemoveWindow(windowId) {
+  removeWindow(windowId);
+  refreshDerivedData();
+  schedulePreview();
+}
+
+function handleAddManualBar(orientation) {
+  const derived = deriveWindowData(state.currentWindow, state.settings);
+  const existing = [...state.currentWindow.sash.grid.customBars[orientation]];
+  const dimension = orientation === 'vertical' ? derived.sashWidth : derived.sashHeight / 2;
+  const defaultPosition = Math.round(dimension / (existing.length + 2));
+  const nextBars = [...existing, defaultPosition].sort((a, b) => a - b);
+  const patch = { sash: { grid: { customBars: { [orientation]: nextBars } } } };
+  updateCurrentWindow(patch);
+  schedulePreview();
+}
+
+function handleRemoveManualBar(orientation, value) {
+  const nextBars = state.currentWindow.sash.grid.customBars[orientation].filter((item) => item !== value);
+  const patch = { sash: { grid: { customBars: { [orientation]: nextBars } } } };
+  updateCurrentWindow(patch);
+  schedulePreview();
+}
+
+function handleSettingsChange(key, value) {
+  if (Number.isNaN(value) && !key.startsWith('sectionMap')) return;
+  if (key.startsWith('sectionMap')) {
+    const [, mapKey] = key.split('.');
+    updateSettings({ sectionMap: { [mapKey]: value } });
+  } else {
+    const mapping = {
+      'settings-kerf': 'kerf',
+      'settings-end-trim': 'endTrim',
+      'settings-min-piece': 'minimumPiece',
+      'settings-stock-sash': 'stockLengthSash',
+      'settings-stock-box': 'stockLengthBox',
+      'settings-horn-extension': 'hornExtensionDefault',
+      'settings-glass-allowance-w': 'glazingAllowanceWidth',
+      'settings-glass-allowance-h': 'glazingAllowanceHeight',
+    };
+    const targetKey = mapping[key];
+    if (targetKey) {
+      updateSettings({ [targetKey]: value });
+    }
+  }
+  refreshDerivedData();
+  schedulePreview();
+}
+
+function initialise() {
+  initUI({
+    onProjectChange: handleProjectChange,
+    onWindowChange: handleWindowChange,
+    onToggleRawSection: handleToggleRawSection,
+    onNewWindow: handleNewWindow,
+    onSaveWindow: handleSaveWindow,
+    onFinishProject: handleFinishProject,
+    onSelectWindow: handleSelectWindow,
+    onRemoveWindow: handleRemoveWindow,
+    onAddManualBar: handleAddManualBar,
+    onRemoveManualBar: handleRemoveManualBar,
+    onSettingsChange: handleSettingsChange,
   });
-  document.querySelector('[data-action="save-project"]').addEventListener('click', handleSaveProject);
-  document.querySelector('[data-action="export-pdf"]').addEventListener('click', handleExportPdf);
-  document.querySelector('[data-action="export-excel"]').addEventListener('click', handleExportExcel);
-  document.querySelector('[data-action="preview-pdf"]').addEventListener('click', handleExportPdf);
-  document.querySelector('[data-action="preview-excel"]').addEventListener('click', handleExportExcel);
+
+  subscribe(() => {
+    projectLabel.textContent = state.project.name || 'Nowy projekt';
+    schedulePreview();
+  });
+
+  schedulePreview();
+  notifyStatus('Gotowy do konfiguracji.');
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  seedDemoData();
-  initNavigation();
-  initComponentActions();
-  bindGlobalControls({
-    onAddComponent: handleAddComponent,
-    onRunOptimization: handleOptimization,
-    onToggleLabels: handleToggleLabels,
-  });
-  bindHeaderActions();
-  initialiseUI();
-});
+window.addEventListener('DOMContentLoaded', initialise);
