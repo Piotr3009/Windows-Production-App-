@@ -1,4 +1,4 @@
-import { deriveWindowData, summariseProjectWindows } from './calculations.js';
+import { deriveWindowData, summariseProjectWindows, CONSTANTS } from './calculations.js';
 import { optimisePrecut } from './optimizer.js';
 import {
   addWindow,
@@ -37,13 +37,13 @@ function buildPatchFromPath(path, value) {
 }
 
 function notifyStatus(message) {
-  statusText.textContent = message;
-  timestamp.textContent = new Date().toLocaleString();
+  if (statusText) statusText.textContent = message;
+  if (timestamp) timestamp.textContent = new Date().toLocaleString();
 }
 
 function handleProjectChange(field, value) {
   updateProjectInfo({ [field]: value });
-  if (field === 'name') {
+  if (field === 'name' && projectLabel) {
     projectLabel.textContent = value || 'Nowy projekt';
   }
 }
@@ -183,6 +183,62 @@ function handleSettingsChange(key, value) {
   schedulePreview();
 }
 
+// --- DXF Export Logic ---
+
+function generateDXF(windowSpec) {
+  if (!windowSpec) return null;
+  const { width, height } = windowSpec.frame;
+  
+  let dxf = `0\nSECTION\n2\nHEADER\n0\nENDSEC\n0\nSECTION\n2\nENTITIES\n`;
+  
+  const rect = (x, y, w, h, layer) => {
+      return `0\nLWPOLYLINE\n8\n${layer}\n90\n4\n70\n1\n` +
+             `10\n${x}\n20\n${y}\n` +
+             `10\n${x+w}\n20\n${y}\n` +
+             `10\n${x+w}\n20\n${y+h}\n` +
+             `10\n${x}\n20\n${y+h}\n`;
+  };
+
+  // Frame Layer
+  dxf += rect(0, 0, width, height, "FRAME");
+  
+  // Sash Layer
+  const sashWidthDeduction = CONSTANTS?.SASH_WIDTH_DEDUCTION || 178;
+  const sashHeightDeduction = CONSTANTS?.SASH_HEIGHT_DEDUCTION || 106;
+
+  const sashW = width - sashWidthDeduction;
+  const sashH = height - sashHeightDeduction;
+  const sashX = (width - sashW) / 2;
+  const sashY = (height - sashH) / 2;
+  dxf += rect(sashX, sashY, sashW, sashH, "SASH");
+  
+  dxf += `0\nENDSEC\n0\nEOF`;
+  return dxf;
+}
+
+function handleDxfExport() {
+  try {
+      const dxfContent = generateDXF(state.currentWindow);
+      if (!dxfContent) throw new Error("Brak danych okna do eksportu.");
+
+      const blob = new Blob([dxfContent], { type: 'application/dxf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${state.currentWindow.name || 'window'}.dxf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      notifyStatus('Pobrano plik DXF.');
+  } catch (e) {
+      console.error(e);
+      notifyStatus('Błąd generowania DXF.');
+  }
+}
+
+// --- Initialization ---
+
 function initialise() {
   initUI({
     onProjectChange: handleProjectChange,
@@ -199,9 +255,18 @@ function initialise() {
   });
 
   subscribe(() => {
-    projectLabel.textContent = state.project.name || 'Nowy projekt';
+    if (projectLabel) projectLabel.textContent = state.project.name || 'Nowy projekt';
     schedulePreview();
   });
+
+  // Obsługa przycisku DXF (jeśli istnieje w DOM)
+  const dxfBtn = document.getElementById('btn-dxf-export');
+  if (dxfBtn) {
+    dxfBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        handleDxfExport();
+    });
+  }
 
   schedulePreview();
   notifyStatus('Gotowy do konfiguracji.');

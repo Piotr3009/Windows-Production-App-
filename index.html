@@ -1,401 +1,358 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sash Production Planner</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/styles.css" />
   <link rel="stylesheet" href="css/custom.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 </head>
-<body class="bg-slate-100 text-slate-900">
-  <div class="min-h-screen grid grid-rows-[auto,1fr,auto]">
-    <header class="bg-slate-900 text-white shadow-lg">
-      <div class="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-        <div class="flex items-center gap-3">
-          <div class="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500 text-lg font-semibold">SW</div>
-          <div>
-            <h1 class="text-xl font-semibold">Sash Production Planner</h1>
-            <p class="text-sm text-slate-300" id="active-project-label">No project loaded</p>
+<body>
+  <div class="app-container">
+    <header class="app-header">
+      <div class="header-content">
+        <div class="header-left">
+          <div class="app-logo">
+            <div class="logo-icon">SW</div>
+            <span>Sash Planner Pro</span>
           </div>
+          <span class="badge badge-info" id="active-project-label">Brak projektu</span>
         </div>
-        <div class="flex items-center gap-2">
-          <button data-action="new-project" class="rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium hover:bg-slate-600">New Project</button>
-          <button data-action="save-project" class="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-400">Save</button>
-          <button data-action="export-pdf" class="rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-400">Export PDF</button>
-          <button data-action="export-excel" class="rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-400">Export Excel</button>
+        <div class="header-right">
+          <button data-action="new-project" class="btn btn-ghost">Nowy</button>
+          <button data-action="save-project" class="btn btn-primary">Zapisz</button>
+          <div class="h-6 w-px bg-slate-200 mx-2"></div>
+          <button data-action="export-pdf" class="btn btn-secondary export-pdf-btn">Export PDF</button>
+          <button data-action="export-excel" id="export-excel-btn" class="btn btn-outline">Export Excel</button>
         </div>
       </div>
     </header>
 
-    <div class="mx-auto flex w-full max-w-7xl gap-6 px-6 py-6">
-      <div id="layout" class="grid w-full grid-cols-1 gap-6 lg:grid-cols-[360px,1fr]">
-        <div id="left-panel" class="sticky top-6 flex flex-col gap-4 self-start">
-          <section id="project-card" class="rounded-2xl bg-white p-5 shadow-md">
-            <div class="mb-4 flex items-center justify-between">
-              <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">Projekt</h2>
-              <div class="flex items-center gap-2 text-xs text-slate-400">
-                <span id="project-status" class="rounded-full bg-slate-100 px-2 py-1">Nowy</span>
-              </div>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <nav class="sidebar-nav">
+          <div class="nav-group">
+            <div class="nav-group-title">Edytor</div>
+            <div class="nav-item is-active" data-view-trigger="designer">
+              <span>Konfigurator</span>
             </div>
-            <div class="space-y-3">
-              <label class="block text-xs font-medium uppercase tracking-wide text-slate-500" for="project-name">Nazwa projektu</label>
-              <input id="project-name" type="text" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Kamienica Poznań" />
-              <label class="block text-xs font-medium uppercase tracking-wide text-slate-500" for="project-client">Klient</label>
-              <input id="project-client" type="text" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Inwestor" />
-              <label class="block text-xs font-medium uppercase tracking-wide text-slate-500" for="project-notes">Notatki</label>
-              <textarea id="project-notes" rows="3" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Uwagi montażowe"></textarea>
+            <div class="nav-item" data-view-trigger="precut">
+              <span>Pre-Cut List</span>
+              <span class="nav-item-badge">PC</span>
             </div>
-            <div class="mt-4 flex flex-wrap gap-2">
-              <button id="btn-new-window" class="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">Nowe okno</button>
-              <button id="btn-save-window" class="flex-1 rounded-lg bg-emerald-500 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-400">Zapisz okno</button>
-              <button id="btn-finish-project" class="w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700">Zakończ projekt</button>
-            </div>
-          </section>
-
-          <section id="window-card" class="rounded-2xl bg-white p-5 shadow-md">
-            <h2 class="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">Okno</h2>
-            <div class="space-y-3">
-              <label class="block text-xs font-medium uppercase tracking-wide text-slate-500" for="window-name">Nazwa</label>
-              <input id="window-name" type="text" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Okno 01" />
-              <div class="grid grid-cols-2 gap-3">
-                <label class="flex flex-col text-xs font-medium uppercase tracking-wide text-slate-500">Szerokość
-                  <input id="frame-width" type="number" class="mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="1200" />
-                </label>
-                <label class="flex flex-col text-xs font-medium uppercase tracking-wide text-slate-500">Wysokość
-                  <input id="frame-height" type="number" class="mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="1500" />
-                </label>
-              </div>
-              <div class="flex items-center justify-between">
-                <label class="flex items-center gap-2 text-sm font-medium text-slate-600">
-                  <input id="horns" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
-                  Horns
-                </label>
-                <label class="flex flex-col text-xs font-medium uppercase tracking-wide text-slate-500">Długość rogu (mm)
-                  <input id="horn-extension-mm" type="number" class="mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm" value="75" />
-                </label>
-              </div>
-              <div class="space-y-2">
-                <label class="block text-xs font-medium uppercase tracking-wide text-slate-500" for="color-ral">Kolor RAL</label>
-                <input id="color-ral" type="text" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="RAL 9010" />
-                <div class="grid grid-cols-2 gap-3">
-                  <label class="flex flex-col text-xs font-medium uppercase tracking-wide text-slate-500">Kolor wewnątrz
-                    <input id="color-int" type="text" class="mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm" />
-                  </label>
-                  <label class="flex flex-col text-xs font-medium uppercase tracking-wide text-slate-500">Kolor na zewnątrz
-                    <input id="color-ext" type="text" class="mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm" />
-                  </label>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section id="bars-card" class="rounded-2xl bg-white p-5 shadow-md">
-            <div class="mb-3 flex items-center justify-between">
-              <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">Bary</h2>
-              <select id="grid-mode" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
-                <option value="2x2">2x2</option>
-                <option value="3x3">3x3</option>
-                <option value="4x4">4x4</option>
-                <option value="6x6">6x6</option>
-                <option value="custom">Custom</option>
-              </select>
-            </div>
-            <div id="grid-custom" class="space-y-3 hidden">
-              <div class="grid grid-cols-2 gap-3">
-                <label class="flex flex-col text-xs font-medium uppercase tracking-wide text-slate-500">Wiersze
-                  <input id="rows" type="number" min="1" class="mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm" value="2" />
-                </label>
-                <label class="flex flex-col text-xs font-medium uppercase tracking-wide text-slate-500">Kolumny
-                  <input id="cols" type="number" min="1" class="mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm" value="2" />
-                </label>
-              </div>
-              <div class="rounded-xl border border-dashed border-slate-200 p-3 text-sm text-slate-600">
-                <p class="mb-2 text-xs uppercase tracking-wide text-slate-500">Manual designer</p>
-                <div class="flex flex-wrap gap-2">
-                  <button id="add-vertical-bar" class="rounded-lg border border-slate-200 px-3 py-1 text-xs font-medium hover:bg-slate-100">Dodaj pionowy</button>
-                  <button id="add-horizontal-bar" class="rounded-lg border border-slate-200 px-3 py-1 text-xs font-medium hover:bg-slate-100">Dodaj poziomy</button>
-                </div>
-                <ul id="custom-bars-list" class="mt-3 space-y-2 text-xs text-slate-500"></ul>
-              </div>
-            </div>
-          </section>
-
-          <section id="glass-card" class="rounded-2xl bg-white p-5 shadow-md">
-            <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">Szkło</h2>
-            <div class="grid grid-cols-2 gap-3">
-              <label class="flex flex-col text-xs font-medium uppercase tracking-wide text-slate-500">Grubość (mm)
-                <input id="glass-thickness" type="number" step="0.1" class="mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm" value="24" />
-              </label>
-              <label class="flex flex-col text-xs font-medium uppercase tracking-wide text-slate-500">Układ
-                <input id="glass-makeup" type="text" class="mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="4x16x4" />
-              </label>
-            </div>
-            <div class="mt-3 grid grid-cols-2 gap-3">
-              <label class="flex items-center gap-2 text-sm font-medium text-slate-600">
-                <input id="glass-toughened" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
-                Hartowane
-              </label>
-              <label class="flex items-center gap-2 text-sm font-medium text-slate-600">
-                <input id="glass-frosted" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
-                Mrożone
-              </label>
-            </div>
-            <div class="mt-3">
-              <label class="block text-xs font-medium uppercase tracking-wide text-slate-500" for="spacer-colour">Kolor ramki</label>
-              <input id="spacer-colour" type="text" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="White" />
-            </div>
-          </section>
-
-          <section id="materials-card" class="rounded-2xl bg-white p-5 shadow-md">
-            <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">Materiały &amp; Sekcje</h2>
-            <div class="space-y-3 text-sm text-slate-600">
-              <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Sash Raw (Engineering 5.9 m)</p>
-              <div class="space-y-2">
-                <label class="flex items-center gap-2">
-                  <input type="checkbox" id="raw-63x63" class="h-4 w-4 rounded border-slate-300" checked />
-                  63×63 mm
-                </label>
-                <label class="flex items-center gap-2">
-                  <input type="checkbox" id="raw-63x95" class="h-4 w-4 rounded border-slate-300" checked />
-                  63×95 mm
-                </label>
-                <label class="flex items-center gap-2">
-                  <input type="checkbox" id="raw-63x120" class="h-4 w-4 rounded border-slate-300" />
-                  63×120 mm
-                </label>
-              </div>
-              <p class="pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Box Raw (Sapele deski)</p>
-              <div class="space-y-2 text-xs">
-                <p>Długość deski: <span id="box-stock-length">2500 mm</span></p>
-                <p>Reguła szerokości: gotowa szerokość + <span id="box-width-allowance">20</span> mm</p>
-              </div>
-              <a href="#" id="open-settings" class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 hover:text-slate-700">Ustawienia</a>
-            </div>
-          </section>
-        </div>
-
-        <div id="right-panel" class="flex flex-col gap-4">
-          <div class="rounded-2xl bg-white p-5 shadow-md">
-            <div class="mb-4 flex items-center justify-between">
-              <div>
-                <h2 class="text-lg font-semibold text-slate-700">Podgląd okna</h2>
-                <p class="text-sm text-slate-500">Aktualizuje się na bieżąco wraz ze zmianami konfiguracji.</p>
-              </div>
-              <div class="flex items-center gap-2 text-xs text-slate-400">
-                <span id="active-window-label">Brak okna</span>
-              </div>
-            </div>
-            <div class="relative aspect-[3/4] w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
-              <canvas id="window-canvas" width="800" height="1000" class="h-full w-full"></canvas>
-              <div id="bars-overlay" class="pointer-events-none absolute inset-0"></div>
+            <div class="nav-item" data-view-trigger="cutlists">
+              <span>Cut Lists</span>
+              <span class="nav-item-badge">CL</span>
             </div>
           </div>
 
-          <div id="designer-tabs" class="rounded-2xl bg-white p-5 shadow-md">
-            <div class="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-3 text-sm font-medium text-slate-600">
-              <button data-view="designer" class="designer-tab rounded-lg bg-slate-900 px-3 py-1 text-white">Designer</button>
-              <button data-view="precut" data-subview="sash" class="designer-tab rounded-lg px-3 py-1">Pre-Cut</button>
-              <button data-view="cutlists" data-subview="box" class="designer-tab rounded-lg px-3 py-1">Cut Lists</button>
-              <button data-view="glazing" class="designer-tab rounded-lg px-3 py-1">Glazing</button>
-              <button data-view="settings" class="designer-tab rounded-lg px-3 py-1">Settings</button>
+          <div class="nav-group">
+            <div class="nav-group-title">Produkcja</div>
+            <div class="nav-item" data-view-trigger="optimizer">
+              <span>Optymalizacja</span>
             </div>
-            <div id="designer-views" class="mt-4 space-y-4">
-              <div data-view-panel="designer" class="space-y-3">
-                <p class="text-sm text-slate-600">Zapisz okno aby dodać do projektu. Lista zapisanych okien pojawi się poniżej.</p>
-                <ul id="windows-list" class="space-y-2"></ul>
-              </div>
-              <div data-view-panel="precut" class="hidden space-y-4">
-                <div class="flex gap-2">
-                  <button data-precut="sash" class="precut-tab rounded-lg bg-slate-900 px-3 py-1 text-sm font-semibold text-white">Sash (Engineering 5.9 m)</button>
-                  <button data-precut="box" class="precut-tab rounded-lg px-3 py-1 text-sm font-semibold">Box (Sapele 2.5 m)</button>
-                </div>
-                <div id="precut-content" class="rounded-xl border border-slate-200 p-4 text-sm text-slate-600"></div>
-              </div>
-              <div data-view-panel="cutlists" class="hidden space-y-4">
-                <div class="flex gap-2">
-                  <button data-cutlist="box" class="cutlist-tab rounded-lg bg-slate-900 px-3 py-1 text-sm font-semibold text-white">Box</button>
-                  <button data-cutlist="sash" class="cutlist-tab rounded-lg px-3 py-1 text-sm font-semibold">Sash</button>
-                </div>
-                <div id="cutlist-content" class="rounded-xl border border-slate-200 p-4 text-sm text-slate-600"></div>
-              </div>
-              <div data-view-panel="glazing" class="hidden space-y-4">
-                <div id="glazing-summary" class="rounded-xl border border-slate-200 p-4 text-sm text-slate-600"></div>
-              </div>
-              <div data-view-panel="settings" class="hidden space-y-4">
-                <div class="grid gap-3 md:grid-cols-2">
-                  <label class="flex flex-col text-xs font-medium uppercase tracking-wide text-slate-500">Kerf (mm)
-                    <input id="settings-kerf" type="number" class="mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm" />
-                  </label>
-                  <label class="flex flex-col text-xs font-medium uppercase tracking-wide text-slate-500">End Trim (mm)
-                    <input id="settings-end-trim" type="number" class="mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm" />
-                  </label>
-                  <label class="flex flex-col text-xs font-medium uppercase tracking-wide text-slate-500">Minimum Piece (mm)
-                    <input id="settings-min-piece" type="number" class="mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm" />
-                  </label>
-                  <label class="flex flex-col text-xs font-medium uppercase tracking-wide text-slate-500">Stock Length Sash (mm)
-                    <input id="settings-stock-sash" type="number" class="mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm" />
-                  </label>
-                  <label class="flex flex-col text-xs font-medium uppercase tracking-wide text-slate-500">Stock Length Box (mm)
-                    <input id="settings-stock-box" type="number" class="mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm" />
-                  </label>
-                  <label class="flex flex-col text-xs font-medium uppercase tracking-wide text-slate-500">Horn default (mm)
-                    <input id="settings-horn-extension" type="number" class="mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm" />
-                  </label>
-                </div>
-                <div>
-                  <label class="block text-xs font-medium uppercase tracking-wide text-slate-500">Glazing allowances (W/H)</label>
-                  <div class="mt-2 grid grid-cols-2 gap-3">
-                    <input id="settings-glass-allowance-w" type="number" class="rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="4" />
-                    <input id="settings-glass-allowance-h" type="number" class="rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="4" />
-                  </div>
-                </div>
-                <div>
-                  <label class="block text-xs font-medium uppercase tracking-wide text-slate-500">Sekcje Sash → Raw</label>
-                  <div id="settings-section-map" class="mt-2 space-y-2 text-sm text-slate-600"></div>
-                </div>
-              </div>
+            <div class="nav-item" data-view-trigger="reports">
+              <span>Raporty</span>
             </div>
           </div>
-        </div>
-      </div>
-
-      <aside class="w-64 space-y-4" hidden>
-        <nav class="rounded-2xl bg-white p-4 shadow-md">
-          <h2 class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Modules</h2>
-          <ul class="space-y-2" id="module-nav">
-            <li><button data-module="cut-list" class="module-link flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-600 hover:bg-slate-100">Cut List<span class="text-xs text-slate-400">Ctrl+1</span></button></li>
-            <li><button data-module="optimizer" class="module-link flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-600 hover:bg-slate-100">Pre-Pre Cut<span class="text-xs text-slate-400">Ctrl+2</span></button></li>
-            <li><button data-module="reports" class="module-link flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-600 hover:bg-slate-100">Reports<span class="text-xs text-slate-400">Ctrl+3</span></button></li>
-            <li><button data-module="settings" class="module-link flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-600 hover:bg-slate-100">Settings<span class="text-xs text-slate-400">Ctrl+4</span></button></li>
-          </ul>
+          
+          <div class="nav-group">
+            <div class="nav-group-title">Projekt</div>
+            <div class="card p-3 bg-slate-50 border border-slate-200">
+               <label class="form-label text-xs">Nazwa projektu</label>
+               <input id="project-name" type="text" class="form-input mb-2 text-xs" placeholder="Nazwa..." />
+               <label class="form-label text-xs">Klient</label>
+               <input id="project-client" type="text" class="form-input text-xs" placeholder="Klient..." />
+            </div>
+          </div>
         </nav>
-
-        <div class="rounded-2xl bg-white p-4 shadow-md">
-          <h2 class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Workshop Mode</h2>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-slate-600">Enable QR labels</span>
-            <label class="relative inline-flex cursor-pointer items-center">
-              <input id="toggle-labels" type="checkbox" class="peer sr-only" />
-              <div class="peer h-6 w-11 rounded-full bg-slate-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:bg-emerald-500 peer-checked:after:translate-x-full"></div>
-            </label>
-          </div>
+        
+        <div class="sidebar-footer">
+           <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-slate-500">Status</span>
+              <span id="project-status" class="badge badge-warning">W toku</span>
+           </div>
         </div>
       </aside>
 
-      <main class="flex-1 space-y-6">
-        <section id="cut-list" class="module-card rounded-2xl bg-white p-6 shadow-md">
-          <div class="mb-4 flex items-center justify-between">
-            <div>
-              <h2 class="text-lg font-semibold">Cut List</h2>
-              <p class="text-sm text-slate-500">Manage all window components and review generated drawings.</p>
-            </div>
-            <button data-action="add-component" class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">Add Component</button>
-          </div>
-          <div class="overflow-hidden rounded-xl border border-slate-200">
-            <table class="min-w-full divide-y divide-slate-200 text-sm">
-              <thead class="bg-slate-50">
-                <tr>
-                  <th class="px-4 py-3 text-left font-medium text-slate-600">ID</th>
-                  <th class="px-4 py-3 text-left font-medium text-slate-600">Type</th>
-                  <th class="px-4 py-3 text-left font-medium text-slate-600">Length (mm)</th>
-                  <th class="px-4 py-3 text-left font-medium text-slate-600">Quantity</th>
-                  <th class="px-4 py-3 text-left font-medium text-slate-600">Section</th>
-                  <th class="px-4 py-3 text-left font-medium text-slate-600">Drawing</th>
-                  <th class="px-4 py-3 text-left font-medium text-slate-600">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="component-table" class="divide-y divide-slate-100 bg-white"></tbody>
-            </table>
-          </div>
-        </section>
+      <main class="app-main">
+        <div class="main-content">
+          
+          <div id="view-designer" class="view-panel block">
+            <div class="grid grid-cols-1 lg:grid-cols-[380px,1fr] gap-6">
+              
+              <div class="flex flex-col gap-6">
+                 <div class="card">
+                    <div class="card-header">
+                       <h3 class="card-title">Parametry Okna</h3>
+                    </div>
+                    <div class="card-body space-y-4">
+                       <div class="form-group">
+                          <label class="form-label">Nazwa okna</label>
+                          <input id="window-name" type="text" class="form-input" placeholder="Np. Okno Kuchnia" />
+                       </div>
+                       <div class="grid grid-cols-2 gap-4">
+                          <div class="form-group">
+                             <label class="form-label">Szerokość (mm)</label>
+                             <input id="frame-width" type="number" class="form-input" value="1200" />
+                          </div>
+                          <div class="form-group">
+                             <label class="form-label">Wysokość (mm)</label>
+                             <input id="frame-height" type="number" class="form-input" value="1500" />
+                          </div>
+                       </div>
+                       
+                       <div class="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                          <div class="flex items-center justify-between mb-2">
+                             <label class="flex items-center gap-2 text-sm font-semibold">
+                                <input id="horns" type="checkbox" class="rounded text-primary focus:ring-primary" />
+                                Rogi (Horns)
+                             </label>
+                          </div>
+                          <input id="horn-extension-mm" type="number" class="form-input text-sm" placeholder="Długość (np. 75)" value="75" />
+                       </div>
 
-        <section id="optimizer" class="module-card hidden rounded-2xl bg-white p-6 shadow-md">
-          <div class="mb-4 flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <h2 class="text-lg font-semibold">Pre-Pre Cut Optimizer</h2>
-              <p class="text-sm text-slate-500">Optimise 5.9 m stock with configurable kerf and trim allowances.</p>
-            </div>
-            <button data-action="run-optimization" class="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-400">Run Optimization</button>
-          </div>
-          <div class="grid gap-4 md:grid-cols-4">
-            <label class="flex flex-col gap-1 text-sm">
-              <span class="font-medium text-slate-600">Stock Length (mm)</span>
-              <input id="stock-length" type="number" class="rounded-lg border border-slate-200 px-3 py-2" value="5900" />
-            </label>
-            <label class="flex flex-col gap-1 text-sm">
-              <span class="font-medium text-slate-600">Kerf (mm)</span>
-              <input id="kerf" type="number" class="rounded-lg border border-slate-200 px-3 py-2" value="3" />
-            </label>
-            <label class="flex flex-col gap-1 text-sm">
-              <span class="font-medium text-slate-600">End Trim (mm)</span>
-              <input id="end-trim" type="number" class="rounded-lg border border-slate-200 px-3 py-2" value="10" />
-            </label>
-            <label class="flex flex-col gap-1 text-sm">
-              <span class="font-medium text-slate-600">Minimum Piece (mm)</span>
-              <input id="min-piece" type="number" class="rounded-lg border border-slate-200 px-3 py-2" value="200" />
-            </label>
-          </div>
-          <div class="mt-6 space-y-3" id="optimization-output"></div>
-        </section>
+                       <div class="form-group">
+                          <label class="form-label">Układ szprosów</label>
+                          <select id="grid-mode" class="form-select">
+                             <option value="2x2">2x2 Tradycyjny</option>
+                             <option value="3x3">3x3 Georgian</option>
+                             <option value="6x6">6x6 Fine</option>
+                             <option value="custom">Niestandardowy</option>
+                          </select>
+                       </div>
+                       
+                       <div id="grid-custom" class="hidden p-3 bg-slate-50 rounded-lg border border-dashed border-slate-300">
+                          <div class="grid grid-cols-2 gap-2 mb-3">
+                             <div>
+                                <label class="text-xs text-slate-500">Wiersze</label>
+                                <input id="rows" type="number" class="form-input text-xs" value="2">
+                             </div>
+                             <div>
+                                <label class="text-xs text-slate-500">Kolumny</label>
+                                <input id="cols" type="number" class="form-input text-xs" value="2">
+                             </div>
+                          </div>
+                          <div class="flex gap-2">
+                             <button id="add-vertical-bar" class="btn btn-sm btn-outline w-full">+ Pion</button>
+                             <button id="add-horizontal-bar" class="btn btn-sm btn-outline w-full">+ Poziom</button>
+                          </div>
+                          <ul id="custom-bars-list" class="mt-2 space-y-1"></ul>
+                       </div>
 
-        <section id="reports" class="module-card hidden rounded-2xl bg-white p-6 shadow-md">
-          <div class="mb-4 flex items-center justify-between">
-            <div>
-              <h2 class="text-lg font-semibold">Reports & Labels</h2>
-              <p class="text-sm text-slate-500">Generate PDF and Excel packs with QR-ready labels.</p>
-            </div>
-            <div class="flex gap-2">
-              <button data-action="preview-pdf" class="rounded-xl bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-400">Preview PDF</button>
-              <button data-action="preview-excel" class="rounded-xl bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-400">Preview Excel</button>
-            </div>
-          </div>
-          <div id="report-preview" class="grid gap-4 md:grid-cols-2">
-            <div class="rounded-xl border border-slate-200 p-4">
-              <h3 class="mb-2 text-sm font-semibold text-slate-600">Cut List Overview</h3>
-              <ul id="report-cut-list" class="space-y-2 text-sm text-slate-600"></ul>
-            </div>
-            <div class="rounded-xl border border-slate-200 p-4">
-              <h3 class="mb-2 text-sm font-semibold text-slate-600">Optimization Summary</h3>
-              <ul id="report-optimizer" class="space-y-2 text-sm text-slate-600"></ul>
-            </div>
-          </div>
-        </section>
+                    </div>
+                    <div class="card-footer">
+                       <button id="btn-new-window" class="btn btn-ghost btn-sm">Reset</button>
+                       <button id="btn-save-window" class="btn btn-success flex-1">Dodaj do projektu</button>
+                    </div>
+                 </div>
 
-        <section id="settings" class="module-card hidden rounded-2xl bg-white p-6 shadow-md">
-          <h2 class="text-lg font-semibold">Settings</h2>
-          <div class="mt-4 grid gap-4 md:grid-cols-2">
-            <label class="flex flex-col gap-1 text-sm">
-              <span class="font-medium text-slate-600">Default Stock Length</span>
-              <input id="default-stock" type="number" class="rounded-lg border border-slate-200 px-3 py-2" value="5900" />
-            </label>
-            <label class="flex flex-col gap-1 text-sm">
-              <span class="font-medium text-slate-600">Default Kerf</span>
-              <input id="default-kerf" type="number" class="rounded-lg border border-slate-200 px-3 py-2" value="3" />
-            </label>
-            <label class="flex flex-col gap-1 text-sm">
-              <span class="font-medium text-slate-600">Units</span>
-              <select id="units" class="rounded-lg border border-slate-200 px-3 py-2">
-                <option value="mm">Millimetres</option>
-                <option value="in">Inches</option>
-              </select>
-            </label>
-            <label class="flex items-center gap-3 text-sm font-medium text-slate-600">
-              <input id="dark-mode" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
-              <span>Dark Mode</span>
-            </label>
+                 <div class="card">
+                    <div class="card-header">
+                       <h3 class="card-title text-base">Szklenie i Wykończenie</h3>
+                    </div>
+                    <div class="card-body space-y-4">
+                       <div class="grid grid-cols-2 gap-4">
+                          <div class="form-group">
+                             <label class="form-label">Grubość szkła</label>
+                             <input id="glass-thickness" type="number" class="form-input" value="24" />
+                          </div>
+                          <div class="form-group">
+                             <label class="form-label">Kolor ramki</label>
+                             <input id="spacer-colour" type="text" class="form-input" value="White" />
+                          </div>
+                       </div>
+                       <div class="flex gap-4">
+                          <label class="flex items-center gap-2 text-sm">
+                             <input id="glass-toughened" type="checkbox" /> Hartowane
+                          </label>
+                          <label class="flex items-center gap-2 text-sm">
+                             <input id="glass-frosted" type="checkbox" /> Mrożone
+                          </label>
+                       </div>
+                       <div class="form-group">
+                          <label class="form-label">Kolor RAL</label>
+                          <input id="color-ral" type="text" class="form-input" placeholder="np. 9010" />
+                       </div>
+                       
+                       <div class="mt-4 pt-4 border-t border-slate-100">
+                          <label class="form-label mb-2">Dostępne sekcje (Raw)</label>
+                          <div class="space-y-2">
+                             <label class="flex items-center justify-between text-sm">
+                                <span>63x63 mm</span>
+                                <input type="checkbox" id="raw-63x63" checked />
+                             </label>
+                             <label class="flex items-center justify-between text-sm">
+                                <span>63x95 mm</span>
+                                <input type="checkbox" id="raw-63x95" checked />
+                             </label>
+                             <label class="flex items-center justify-between text-sm">
+                                <span>63x120 mm</span>
+                                <input type="checkbox" id="raw-63x120" />
+                             </label>
+                          </div>
+                       </div>
+                    </div>
+                 </div>
+              </div>
+
+              <div class="flex flex-col gap-6">
+                 <div class="card h-full flex flex-col">
+                    <div class="card-header">
+                       <div>
+                          <h3 class="card-title">Podgląd Techniczny</h3>
+                          <p class="card-subtitle" id="active-window-label">Nowe okno</p>
+                       </div>
+                       <div class="flex gap-2">
+                          <button class="btn btn-sm btn-outline" id="btn-dxf-export">Pobierz DXF</button>
+                       </div>
+                    </div>
+                    <div class="card-body flex-1 bg-slate-100 rounded-lg border border-slate-200 relative overflow-hidden flex items-center justify-center p-4">
+                       <canvas id="window-canvas" class="shadow-2xl rounded max-w-full max-h-[600px]"></canvas>
+                       <div id="bars-overlay" class="absolute inset-0 pointer-events-none"></div>
+                    </div>
+                    <div class="card-footer justify-between">
+                       <div class="text-xs text-slate-500">
+                          <p>Kółko myszy: Zoom • Lewy przycisk: Przesuwanie</p>
+                       </div>
+                    </div>
+                 </div>
+
+                 <div class="card">
+                    <div class="card-header">
+                       <h3 class="card-title text-base">Okna w projekcie</h3>
+                    </div>
+                    <div class="card-body">
+                       <ul id="windows-list" class="space-y-2">
+                          <li class="empty-state">Brak okien w projekcie. Zapisz bieżące okno.</li>
+                       </ul>
+                    </div>
+                    <div class="card-footer">
+                       <button id="btn-finish-project" class="btn btn-primary w-full">Zakończ i generuj raporty</button>
+                    </div>
+                 </div>
+              </div>
+
+            </div>
           </div>
-        </section>
+
+          <div id="view-precut" class="view-panel hidden">
+             <div class="mb-6 flex items-center justify-between">
+                <h2 class="text-2xl font-bold">Listy Pre-Cut</h2>
+                <div class="flex gap-2 bg-white p-1 rounded-lg border border-slate-200">
+                   <button data-precut="sash" class="precut-tab btn btn-sm btn-primary">Sash (5.9m)</button>
+                   <button data-precut="box" class="precut-tab btn btn-sm btn-ghost">Box (2.5m)</button>
+                </div>
+             </div>
+             <div id="precut-content" class="grid gap-6 grid-cols-1 xl:grid-cols-2"></div>
+          </div>
+
+          <div id="view-cutlists" class="view-panel hidden">
+             <div class="mb-6 flex items-center justify-between">
+                <h2 class="text-2xl font-bold">Listy Cięć (Final)</h2>
+                <div class="flex gap-2 bg-white p-1 rounded-lg border border-slate-200">
+                   <button data-cutlist="box" class="cutlist-tab btn btn-sm btn-primary">Box</button>
+                   <button data-cutlist="sash" class="cutlist-tab btn btn-sm btn-ghost">Sash</button>
+                </div>
+             </div>
+             <div class="card overflow-hidden">
+                <div id="cutlist-content" class="table-container"></div>
+             </div>
+          </div>
+          
+          <div id="view-optimizer" class="view-panel hidden">
+             <div class="card">
+                <div class="card-header">
+                   <h3 class="card-title">Optymalizacja Rozkroju</h3>
+                   <button data-action="run-optimization" class="btn btn-primary">Uruchom obliczenia</button>
+                </div>
+                <div class="card-body">
+                   <div class="grid grid-cols-4 gap-4 mb-6">
+                      <div class="form-group">
+                         <label class="form-label">Długość sztangi (mm)</label>
+                         <input id="stock-length" type="number" class="form-input" value="5900">
+                      </div>
+                      <div class="form-group">
+                         <label class="form-label">Rzaz (Kerf)</label>
+                         <input id="kerf" type="number" class="form-input" value="3">
+                      </div>
+                   </div>
+                   <div id="optimization-output" class="space-y-4">
+                      <p class="text-slate-500">Kliknij "Uruchom obliczenia" aby wygenerować schemat cięcia.</p>
+                   </div>
+                </div>
+             </div>
+          </div>
+          
+           <div id="view-reports" class="view-panel hidden">
+              <div class="grid gap-6 md:grid-cols-2">
+                 <div class="card">
+                    <div class="card-header">
+                       <h3 class="card-title">Podsumowanie Szklenia</h3>
+                    </div>
+                    <div id="glazing-summary" class="card-body table-container"></div>
+                 </div>
+                 <div class="card">
+                    <div class="card-header">
+                       <h3 class="card-title">Ustawienia globalne</h3>
+                    </div>
+                    <div class="card-body space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                           <div class="form-group">
+                              <label class="form-label">Stock Sash (mm)</label>
+                              <input id="settings-stock-sash" class="form-input">
+                           </div>
+                           <div class="form-group">
+                              <label class="form-label">Stock Box (mm)</label>
+                              <input id="settings-stock-box" class="form-input">
+                           </div>
+                        </div>
+                        <div id="settings-section-map" class="space-y-2"></div>
+                        <button id="open-settings" class="btn btn-outline w-full mt-4">Więcej ustawień</button>
+                    </div>
+                 </div>
+              </div>
+           </div>
+
+        </div>
       </main>
     </div>
-
-    <footer class="border-t border-slate-200 bg-white">
-      <div class="mx-auto flex max-w-7xl items-center justify-between px-6 py-3 text-xs text-slate-500">
-        <span>Ready • <span id="status-text">Awaiting input</span></span>
-        <span id="timestamp"></span>
-      </div>
+    
+    <footer class="bg-white border-t border-slate-200 px-6 py-2 flex justify-between items-center text-xs text-slate-500">
+       <div>
+          <span id="timestamp"></span>
+       </div>
+       <div>
+          Sash Production Planner v2.1 • <span id="status-text">Gotowy</span>
+       </div>
     </footer>
   </div>
-
-  <script type="module" src="js/app.js"></script>
+  
+  <script type="module">
+     // Prosty router widoków wbudowany w HTML dla kompatybilności
+     import { setActiveView } from './js/state.js';
+     
+     document.querySelectorAll('[data-view-trigger]').forEach(btn => {
+        btn.addEventListener('click', () => {
+           // UI active state
+           document.querySelectorAll('[data-view-trigger]').forEach(b => b.classList.remove('is-active'));
+           btn.classList.add('is-active');
+           
+           // Hide/Show panels
+           const viewName = btn.dataset.viewTrigger;
+           document.querySelectorAll('.view-panel').forEach(p => p.classList.add('hidden'));
+           const target = document.getElementById(`view-${viewName}`);
+           if(target) target.classList.remove('hidden');
+           
+           // Update State
+           setActiveView(viewName);
+        });
+     });
+     
+     // Inicjalizacja przy starcie
+     import './js/app.js';
+  </script>
 </body>
 </html>
