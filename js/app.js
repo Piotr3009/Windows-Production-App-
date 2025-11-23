@@ -16,6 +16,7 @@ import {
 } from './state.js';
 import { renderWindowPreview } from './renderer.js';
 import { initUI } from './ui.js';
+import { registerExportHandlers } from './export.js';
 
 const projectLabel = document.getElementById('active-project-label');
 const statusText = document.getElementById('status-text');
@@ -67,6 +68,7 @@ function handleToggleRawSection(section, enabled) {
 function createWindowPayload() {
   const frameWidth = Number(state.currentWindow.frame.width);
   const frameHeight = Number(state.currentWindow.frame.height);
+  
   if (!Number.isFinite(frameWidth) || frameWidth <= 0) {
     throw new Error('Podaj poprawną szerokość ramy.');
   }
@@ -196,15 +198,18 @@ function generateDXF(windowSpec) {
              `10\n${x}\n20\n${y}\n` +
              `10\n${x+w}\n20\n${y}\n` +
              `10\n${x+w}\n20\n${y+h}\n` +
-             `10\n${x}\n20\n${y+h}\n`;
+             `10\n${x}\n20\n${y+h}\n` +
+             `10\n${x}\n20\n${y}\n` + // Zamknięcie pętli
+             `0\nSEQEND\n`;
   };
 
   // Frame Layer
   dxf += rect(0, 0, width, height, "FRAME");
   
   // Sash Layer
-  const sashWidthDeduction = CONSTANTS?.SASH_WIDTH_DEDUCTION || 178;
-  const sashHeightDeduction = CONSTANTS?.SASH_HEIGHT_DEDUCTION || 106;
+  // Używamy bezpiecznych wartości domyślnych, jeśli CONSTANTS nie są załadowane
+  const sashWidthDeduction = (CONSTANTS && CONSTANTS.SASH_WIDTH_DEDUCTION) || 178;
+  const sashHeightDeduction = (CONSTANTS && CONSTANTS.SASH_HEIGHT_DEDUCTION) || 106;
 
   const sashW = width - sashWidthDeduction;
   const sashH = height - sashHeightDeduction;
@@ -254,18 +259,36 @@ function initialise() {
     onSettingsChange: handleSettingsChange,
   });
 
+  // Rejestracja handlerów eksportu PDF/CSV/Excel
+  if (typeof registerExportHandlers === 'function') {
+      registerExportHandlers(
+          () => state.project, // getResult (może wymagać dostosowania zależnie od export.js)
+          () => state.currentWindow // getWindowData
+      );
+  }
+
   subscribe(() => {
     if (projectLabel) projectLabel.textContent = state.project.name || 'Nowy projekt';
     schedulePreview();
   });
 
-  // Obsługa przycisku DXF (jeśli istnieje w DOM)
+  // Obsługa przycisku DXF
   const dxfBtn = document.getElementById('btn-dxf-export');
   if (dxfBtn) {
     dxfBtn.addEventListener('click', (e) => {
         e.preventDefault();
         handleDxfExport();
     });
+  }
+  
+  // Obsługa przycisku Optymalizacji
+  const optBtn = document.getElementById('btn-run-opt');
+  if (optBtn) {
+      optBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          refreshDerivedData();
+          notifyStatus('Optymalizacja zaktualizowana.');
+      });
   }
 
   schedulePreview();

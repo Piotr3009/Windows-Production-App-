@@ -22,7 +22,7 @@
         </div>
         <div class="header-right">
           <button data-action="new-project" class="btn btn-ghost">Nowy</button>
-          <button data-action="save-project" class="btn btn-primary">Zapisz</button>
+          <button data-action="save-project" class="btn btn-primary">Zapisz Projekt</button>
           <div class="h-6 w-px bg-slate-200 mx-2"></div>
           <button data-action="export-pdf" class="btn btn-secondary export-pdf-btn">Export PDF</button>
           <button data-action="export-excel" id="export-excel-btn" class="btn btn-outline">Export Excel</button>
@@ -59,12 +59,14 @@
           </div>
           
           <div class="nav-group">
-            <div class="nav-group-title">Projekt</div>
+            <div class="nav-group-title">Dane Projektu</div>
             <div class="card p-3 bg-slate-50 border border-slate-200">
                <label class="form-label text-xs">Nazwa projektu</label>
                <input id="project-name" type="text" class="form-input mb-2 text-xs" placeholder="Nazwa..." />
                <label class="form-label text-xs">Klient</label>
                <input id="project-client" type="text" class="form-input text-xs" placeholder="Klient..." />
+               <label class="form-label text-xs mt-2">Notatki</label>
+               <textarea id="project-notes" class="form-textarea text-xs" rows="2"></textarea>
             </div>
           </div>
         </nav>
@@ -119,7 +121,8 @@
                           <select id="grid-mode" class="form-select">
                              <option value="2x2">2x2 Tradycyjny</option>
                              <option value="3x3">3x3 Georgian</option>
-                             <option value="6x6">6x6 Fine</option>
+                             <option value="4x4">4x4 Fine</option>
+                             <option value="6x6">6x6 Extra Fine</option>
                              <option value="custom">Niestandardowy</option>
                           </select>
                        </div>
@@ -160,9 +163,13 @@
                              <input id="glass-thickness" type="number" class="form-input" value="24" />
                           </div>
                           <div class="form-group">
-                             <label class="form-label">Kolor ramki</label>
-                             <input id="spacer-colour" type="text" class="form-input" value="White" />
+                             <label class="form-label">Układ (Makeup)</label>
+                             <input id="glass-makeup" type="text" class="form-input" placeholder="4x16x4" />
                           </div>
+                       </div>
+                       <div class="form-group">
+                          <label class="form-label">Kolor ramki</label>
+                          <input id="spacer-colour" type="text" class="form-input" value="White" />
                        </div>
                        <div class="flex gap-4">
                           <label class="flex items-center gap-2 text-sm">
@@ -172,9 +179,14 @@
                              <input id="glass-frosted" type="checkbox" /> Mrożone
                           </label>
                        </div>
-                       <div class="form-group">
+                       <div class="form-group pt-2">
                           <label class="form-label">Kolor RAL</label>
                           <input id="color-ral" type="text" class="form-input" placeholder="np. 9010" />
+                       </div>
+                       
+                       <div class="grid grid-cols-2 gap-2 text-xs">
+                          <input id="color-int" type="text" class="form-input" placeholder="Wewnątrz" />
+                          <input id="color-ext" type="text" class="form-input" placeholder="Zewnątrz" />
                        </div>
                        
                        <div class="mt-4 pt-4 border-t border-slate-100">
@@ -202,20 +214,20 @@
                  <div class="card h-full flex flex-col">
                     <div class="card-header">
                        <div>
-                          <h3 class="card-title">Podgląd Techniczny</h3>
+                          <h3 class="card-title">Rysunek Techniczny</h3>
                           <p class="card-subtitle" id="active-window-label">Nowe okno</p>
                        </div>
                        <div class="flex gap-2">
                           <button class="btn btn-sm btn-outline" id="btn-dxf-export">Pobierz DXF</button>
                        </div>
                     </div>
-                    <div class="card-body flex-1 bg-slate-100 rounded-lg border border-slate-200 relative overflow-hidden flex items-center justify-center p-4">
-                       <canvas id="window-canvas" class="shadow-2xl rounded max-w-full max-h-[600px]"></canvas>
+                    <div class="card-body flex-1 bg-white rounded-lg border border-slate-200 relative overflow-hidden flex items-center justify-center p-0">
+                       <canvas id="window-canvas" class="w-full h-full cursor-grab"></canvas>
                        <div id="bars-overlay" class="absolute inset-0 pointer-events-none"></div>
                     </div>
                     <div class="card-footer justify-between">
                        <div class="text-xs text-slate-500">
-                          <p>Kółko myszy: Zoom • Lewy przycisk: Przesuwanie</p>
+                          <p>Sterowanie: Scroll = Zoom, Przeciągnij = Przesuń</p>
                        </div>
                     </div>
                  </div>
@@ -226,7 +238,7 @@
                     </div>
                     <div class="card-body">
                        <ul id="windows-list" class="space-y-2">
-                          <li class="empty-state">Brak okien w projekcie. Zapisz bieżące okno.</li>
+                          <li class="empty-state text-sm text-slate-500 text-center py-4">Brak okien w projekcie. Zapisz bieżące okno przyciskiem po lewej.</li>
                        </ul>
                     </div>
                     <div class="card-footer">
@@ -266,21 +278,29 @@
              <div class="card">
                 <div class="card-header">
                    <h3 class="card-title">Optymalizacja Rozkroju</h3>
-                   <button data-action="run-optimization" class="btn btn-primary">Uruchom obliczenia</button>
+                   <button id="btn-run-opt" data-action="run-optimization" class="btn btn-primary">Uruchom obliczenia</button>
                 </div>
                 <div class="card-body">
                    <div class="grid grid-cols-4 gap-4 mb-6">
                       <div class="form-group">
                          <label class="form-label">Długość sztangi (mm)</label>
-                         <input id="stock-length" type="number" class="form-input" value="5900">
+                         <input id="settings-stock-sash" type="number" class="form-input" value="5900">
                       </div>
                       <div class="form-group">
                          <label class="form-label">Rzaz (Kerf)</label>
-                         <input id="kerf" type="number" class="form-input" value="3">
+                         <input id="settings-kerf" type="number" class="form-input" value="3">
+                      </div>
+                      <div class="form-group">
+                         <label class="form-label">Ścinki (End Trim)</label>
+                         <input id="settings-end-trim" type="number" class="form-input" value="10">
+                      </div>
+                      <div class="form-group">
+                         <label class="form-label">Min. odpad</label>
+                         <input id="settings-min-piece" type="number" class="form-input" value="200">
                       </div>
                    </div>
                    <div id="optimization-output" class="space-y-4">
-                      <p class="text-slate-500">Kliknij "Uruchom obliczenia" aby wygenerować schemat cięcia.</p>
+                      <p class="text-slate-500 text-center py-6">Kliknij "Uruchom obliczenia" aby wygenerować schemat cięcia.</p>
                    </div>
                 </div>
              </div>
@@ -301,16 +321,20 @@
                     <div class="card-body space-y-4">
                         <div class="grid grid-cols-2 gap-4">
                            <div class="form-group">
-                              <label class="form-label">Stock Sash (mm)</label>
-                              <input id="settings-stock-sash" class="form-input">
-                           </div>
-                           <div class="form-group">
                               <label class="form-label">Stock Box (mm)</label>
                               <input id="settings-stock-box" class="form-input">
                            </div>
+                           <div class="form-group">
+                              <label class="form-label">Allow. Glass W</label>
+                              <input id="settings-glass-allowance-w" class="form-input">
+                           </div>
+                           <div class="form-group">
+                              <label class="form-label">Allow. Glass H</label>
+                              <input id="settings-glass-allowance-h" class="form-input">
+                           </div>
                         </div>
-                        <div id="settings-section-map" class="space-y-2"></div>
-                        <button id="open-settings" class="btn btn-outline w-full mt-4">Więcej ustawień</button>
+                        <div id="settings-section-map" class="space-y-2 mt-4"></div>
+                        <button id="open-settings" class="btn btn-outline w-full mt-4">Pokaż pełne ustawienia</button>
                     </div>
                  </div>
               </div>
@@ -325,33 +349,29 @@
           <span id="timestamp"></span>
        </div>
        <div>
-          Sash Production Planner v2.1 • <span id="status-text">Gotowy</span>
+          Sash Production Planner v2.2 (CAD Mode) • <span id="status-text">Gotowy</span>
        </div>
     </footer>
   </div>
   
   <script type="module">
-     // Prosty router widoków wbudowany w HTML dla kompatybilności
      import { setActiveView } from './js/state.js';
      
+     // Simple Router
      document.querySelectorAll('[data-view-trigger]').forEach(btn => {
         btn.addEventListener('click', () => {
-           // UI active state
            document.querySelectorAll('[data-view-trigger]').forEach(b => b.classList.remove('is-active'));
            btn.classList.add('is-active');
            
-           // Hide/Show panels
            const viewName = btn.dataset.viewTrigger;
            document.querySelectorAll('.view-panel').forEach(p => p.classList.add('hidden'));
            const target = document.getElementById(`view-${viewName}`);
            if(target) target.classList.remove('hidden');
            
-           // Update State
            setActiveView(viewName);
         });
      });
      
-     // Inicjalizacja przy starcie
      import './js/app.js';
   </script>
 </body>

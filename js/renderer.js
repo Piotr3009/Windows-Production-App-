@@ -4,90 +4,20 @@ let panzoom = null;
 const canvas = document.getElementById('window-canvas');
 const overlay = document.getElementById('bars-overlay');
 
-// --- Helpers graficzne ---
-function createWoodGradient(ctx, x, y, w, h, isHorizontal) {
-    const grad = isHorizontal 
-        ? ctx.createLinearGradient(x, y, x, y + h)
-        : ctx.createLinearGradient(x, y, x + w, y);
-    
-    // Symulacja profilowania drewna (cieniowanie)
-    grad.addColorStop(0, '#e2e8f0');
-    grad.addColorStop(0.1, '#cbd5e1');
-    grad.addColorStop(0.5, '#f8fafc'); // Highlight na środku
-    grad.addColorStop(0.9, '#cbd5e1');
-    grad.addColorStop(1, '#94a3b8');
-    return grad;
-}
+// --- Styl techniczny (CAD) ---
+const STYLES = {
+    background: '#ffffff',
+    frameFill: '#f1f5f9',
+    frameStroke: '#0f172a',
+    sashFill: '#ffffff',
+    sashStroke: '#334155',
+    glassFill: 'rgba(224, 242, 254, 0.3)', // Bardzo jasny błękit
+    dimensionColor: '#dc2626',
+    dimensionText: '#dc2626',
+    barStroke: '#0f172a'
+};
 
-function drawGlassEffect(ctx, x, y, w, h) {
-    ctx.save();
-    // Błękitny odcień szkła z gradientem
-    const grad = ctx.createLinearGradient(x, y, x + w, y + h);
-    grad.addColorStop(0, 'rgba(200, 230, 255, 0.4)');
-    grad.addColorStop(1, 'rgba(230, 240, 255, 0.1)');
-    
-    ctx.fillStyle = grad;
-    ctx.fillRect(x, y, w, h);
-    
-    // Refleksy (paski odblaskowe)
-    ctx.beginPath();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-    ctx.lineWidth = 2;
-    ctx.moveTo(x + w * 0.7, y);
-    ctx.lineTo(x + w, y + h * 0.3);
-    ctx.moveTo(x + w * 0.6, y);
-    ctx.lineTo(x + w, y + h * 0.4);
-    ctx.stroke();
-    ctx.restore();
-}
-
-function drawArrow(ctx, x1, y1, x2, y2, text) {
-    const headlen = 8; // długość grotu
-    const angle = Math.atan2(y2 - y1, x2 - x1);
-    
-    ctx.save();
-    ctx.strokeStyle = '#dc2626'; // Czerwony wymiar
-    ctx.fillStyle = '#dc2626';
-    ctx.lineWidth = 1;
-    ctx.font = 'bold 12px Inter, sans-serif';
-    
-    // Linia
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.stroke();
-
-    // Groty
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x1 + headlen * Math.cos(angle + Math.PI / 6), y1 + headlen * Math.sin(angle + Math.PI / 6));
-    ctx.lineTo(x1 + headlen * Math.cos(angle - Math.PI / 6), y1 + headlen * Math.sin(angle - Math.PI / 6));
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.moveTo(x2, y2);
-    ctx.lineTo(x2 - headlen * Math.cos(angle + Math.PI / 6), y2 - headlen * Math.sin(angle + Math.PI / 6));
-    ctx.lineTo(x2 - headlen * Math.cos(angle - Math.PI / 6), y2 - headlen * Math.sin(angle - Math.PI / 6));
-    ctx.fill();
-
-    // Tekst (tło pod tekstem dla czytelności)
-    const midX = (x1 + x2) / 2;
-    const midY = (y1 + y2) / 2;
-    const textMetrics = ctx.measureText(text);
-    
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-    const pad = 2;
-    ctx.fillRect(midX - textMetrics.width/2 - pad, midY - 10, textMetrics.width + pad*2, 14);
-    
-    ctx.fillStyle = '#dc2626';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(text, midX, midY - 3);
-    
-    ctx.restore();
-}
-
-// ... (CanvasPanzoom class pozostaje bez zmian - skopiuj z oryginalnego pliku) ...
+// --- Klasa PanZoom (Nawigacja po rysunku) ---
 class CanvasPanzoom {
     constructor(element) {
       this.element = element;
@@ -96,15 +26,14 @@ class CanvasPanzoom {
       this.translateY = 0;
       this.isDragging = false;
       this.lastPointer = { x: 0, y: 0 };
-      this.step = 0.1;
-      this.minScale = 0.4;
-      this.maxScale = 3;
-  
+      this.minScale = 0.1;
+      this.maxScale = 10;
+
       this.onWheel = this.onWheel.bind(this);
       this.onPointerDown = this.onPointerDown.bind(this);
       this.onPointerMove = this.onPointerMove.bind(this);
       this.onPointerUp = this.onPointerUp.bind(this);
-  
+
       element.style.touchAction = 'none';
       element.addEventListener('wheel', this.onWheel, { passive: false });
       element.addEventListener('pointerdown', this.onPointerDown);
@@ -114,37 +43,33 @@ class CanvasPanzoom {
     }
   
     dispose() {
+      if (!this.element) return;
       this.element.removeEventListener('wheel', this.onWheel);
       this.element.removeEventListener('pointerdown', this.onPointerDown);
       this.element.removeEventListener('pointermove', this.onPointerMove);
       this.element.removeEventListener('pointerup', this.onPointerUp);
       this.element.removeEventListener('pointerleave', this.onPointerUp);
-      this.element.style.transform = '';
-    }
-  
-    apply() {
-      // Używamy transformacji CSS dla wydajności, canvas renderuje się w wysokiej rozdzielczości
-      // this.element.style.transform = `translate(${this.translateX}px, ${this.translateY}px) scale(${this.scale})`;
-      // UWAGA: W tej wersji renderujemy bezpośrednio na canvasie z uwzględnieniem skali,
-      // więc CanvasPanzoom służy tylko do trzymania stanu. Odświeżenie następuje przez requestAnimationFrame lub eventy.
-      // Aby uprościć integrację z twoim kodem, wywołujemy renderWindowPreview przy każdej zmianie pan/zoom.
-      // (Wymagałoby to przekazania referencji do danych okna do klasy, zrobimy to prościej poniżej)
     }
   
     onWheel(event) {
         event.preventDefault();
+        const zoomIntensity = 0.1;
         const direction = event.deltaY > 0 ? -1 : 1;
-        this.scale = Math.min(this.maxScale, Math.max(this.minScale, this.scale + direction * this.step));
-        // Trigger redraw external
-        const eventChange = new CustomEvent('canvas-change');
+        
+        // Zoom w kierunku kursora (uproszczony)
+        const oldScale = this.scale;
+        const newScale = Math.min(this.maxScale, Math.max(this.minScale, oldScale + direction * zoomIntensity * oldScale));
+        this.scale = newScale;
+        
+        const eventChange = new CustomEvent('redraw-request');
         this.element.dispatchEvent(eventChange);
     }
   
     onPointerDown(event) {
-        if (event.button !== 0) return;
         this.isDragging = true;
         this.lastPointer = { x: event.clientX, y: event.clientY };
         this.element.setPointerCapture?.(event.pointerId);
+        this.element.style.cursor = 'grabbing';
     }
   
     onPointerMove(event) {
@@ -154,14 +79,115 @@ class CanvasPanzoom {
         this.translateX += dx;
         this.translateY += dy;
         this.lastPointer = { x: event.clientX, y: event.clientY };
-        const eventChange = new CustomEvent('canvas-change');
+        const eventChange = new CustomEvent('redraw-request');
         this.element.dispatchEvent(eventChange);
     }
   
     onPointerUp(event) {
         this.isDragging = false;
-        this.element.releasePointerCapture?.(event.pointerId);
+        if (this.element) {
+            this.element.releasePointerCapture?.(event.pointerId);
+            this.element.style.cursor = 'grab';
+        }
     }
+}
+
+// --- Funkcje Rysowania ---
+
+function clearCanvas(ctx, w, h) {
+    ctx.fillStyle = STYLES.background;
+    ctx.fillRect(0, 0, w, h);
+    
+    // Siatka pomocnicza (Grid) - opcjonalnie
+    ctx.beginPath();
+    ctx.strokeStyle = '#f1f5f9';
+    ctx.lineWidth = 1;
+    const gridSize = 50;
+    // Rysowanie siatki można pominąć dla czystości, lub dodać jeśli potrzebne
+}
+
+function drawRect(ctx, x, y, w, h, fill, stroke) {
+    if (fill) {
+        ctx.fillStyle = fill;
+        ctx.fillRect(x, y, w, h);
+    }
+    if (stroke) {
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = 1.5; // Grubsze linie dla konturów
+        ctx.strokeRect(x, y, w, h);
+    }
+    
+    // Opcjonalnie: Szrafowanie (Hatch) dla przekrojów drewna
+    // Tu pomijamy dla czytelności widoku elewacji
+}
+
+function drawDimensionLine(ctx, x1, y1, x2, y2, text, offset = 40) {
+    ctx.save();
+    ctx.strokeStyle = STYLES.dimensionColor;
+    ctx.fillStyle = STYLES.dimensionColor;
+    ctx.lineWidth = 1;
+    ctx.font = '600 12px Inter, sans-serif';
+
+    // Oblicz wektor prostopadły dla offsetu
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const len = Math.sqrt(dx*dx + dy*dy);
+    let udx = -dy/len; // Normalna
+    let udy = dx/len;
+    
+    // Jeśli wymiar jest pionowy (dx=0), upewnij się że offset idzie w lewo
+    if (Math.abs(dx) < 0.001 && offset > 0) { udx = -1; udy = 0; }
+    
+    const ox = udx * offset;
+    const oy = udy * offset;
+
+    const p1x = x1 + ox; 
+    const p1y = y1 + oy;
+    const p2x = x2 + ox;
+    const p2y = y2 + oy;
+
+    // Linie pomocnicze (witness lines)
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(p1x + udx * 5, p1y + udy * 5); // Lekki nadmiar
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(p2x + udx * 5, p2y + udy * 5);
+    ctx.strokeStyle = 'rgba(220, 38, 38, 0.4)'; // Jaśniejszy czerwony dla linii pomocniczych
+    ctx.stroke();
+
+    // Główna linia wymiarowa
+    ctx.beginPath();
+    ctx.moveTo(p1x, p1y);
+    ctx.lineTo(p2x, p2y);
+    ctx.strokeStyle = STYLES.dimensionColor;
+    ctx.stroke();
+
+    // Groty (Tick marks architektoniczne - ukośne kreski)
+    const tickSize = 4;
+    ctx.beginPath();
+    ctx.lineWidth = 2;
+    // Tick 1
+    ctx.moveTo(p1x - tickSize, p1y - tickSize);
+    ctx.lineTo(p1x + tickSize, p1y + tickSize);
+    // Tick 2
+    ctx.moveTo(p2x - tickSize, p2y - tickSize);
+    ctx.lineTo(p2x + tickSize, p2y + tickSize);
+    ctx.stroke();
+
+    // Tekst
+    const midX = (p1x + p2x) / 2;
+    const midY = (p1y + p2y) / 2;
+    
+    ctx.fillStyle = STYLES.background; // Tło pod tekst
+    const textW = ctx.measureText(text).width + 8;
+    ctx.fillRect(midX - textW/2, midY - 8, textW, 16);
+    
+    ctx.fillStyle = STYLES.dimensionText;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, midX, midY);
+
+    ctx.restore();
 }
 
 let currentWindowSpec = null;
@@ -170,160 +196,158 @@ let currentSettings = null;
 function ensurePanzoom() {
   if (canvas && !panzoom) {
     panzoom = new CanvasPanzoom(canvas);
-    canvas.addEventListener('canvas-change', () => {
+    canvas.addEventListener('redraw-request', () => {
         if(currentWindowSpec) renderWindowPreview(currentWindowSpec, currentSettings);
     });
   }
 }
 
-function clearCanvas() {
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-}
-
-function drawRect(ctx, x, y, w, h, isHorizontal = false) {
-    ctx.fillStyle = createWoodGradient(ctx, x, y, w, h, isHorizontal);
-    ctx.strokeStyle = '#475569';
-    ctx.lineWidth = 1;
-    ctx.fillRect(x, y, w, h);
-    ctx.strokeRect(x, y, w, h);
-}
-
-function drawFrame(ctx, x, y, w, h) {
-    // Rama zewnętrzna
-    drawRect(ctx, x, y, w, h, false);
-    // Wycieramy środek żeby narysować Sash
-    ctx.clearRect(x + 10, y + 10, w - 20, h - 20); // Uproszczone
-    ctx.strokeRect(x, y, w, h);
-}
-
+// --- Główny Render ---
 export function renderWindowPreview(windowSpec, settings = {}) {
-  currentWindowSpec = windowSpec;
-  currentSettings = settings;
-  ensurePanzoom();
-  
-  if (!canvas || !windowSpec) return;
-  const ctx = canvas.getContext('2d');
-  
-  // High DPI support
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  canvas.width = rect.width * dpr;
-  canvas.height = rect.height * dpr;
-  ctx.scale(dpr, dpr);
+    currentWindowSpec = windowSpec;
+    currentSettings = settings;
 
-  clearCanvas();
-  // Clear overlay (handles) if needed
-  if(overlay) overlay.innerHTML = '';
+    if (!canvas || !windowSpec || !windowSpec.frame) return;
+    ensurePanzoom();
 
-  const frameWidth = Number(windowSpec.frame?.width ?? 0);
-  const frameHeight = Number(windowSpec.frame?.height ?? 0);
-  if (!frameWidth || !frameHeight) return;
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    
+    if (rect.width === 0) return;
 
-  const derived = deriveWindowData(windowSpec, settings);
-  
-  // Obliczanie skali i pozycji (PanZoom)
-  const maxDim = Math.max(frameWidth, frameHeight);
-  const baseScale = Math.min((rect.width * 0.8) / maxDim, (rect.height * 0.8) / maxDim);
-  
-  const finalScale = baseScale * panzoom.scale;
-  const centerX = rect.width / 2 + panzoom.translateX;
-  const centerY = rect.height / 2 + panzoom.translateY;
-  
-  const drawX = centerX - (frameWidth * finalScale) / 2;
-  const drawY = centerY - (frameHeight * finalScale) / 2;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.resetTransform();
+    ctx.scale(dpr, dpr);
 
-  // 1. Rysowanie RAMY (Box)
-  const fw = frameWidth * finalScale;
-  const fh = frameHeight * finalScale;
-  
-  ctx.save();
-  // Cień pod oknem
-  ctx.shadowColor = "rgba(0, 0, 0, 0.2)";
-  ctx.shadowBlur = 15;
-  ctx.shadowOffsetX = 5;
-  ctx.shadowOffsetY = 5;
-  
-  // HEAD
-  drawRect(ctx, drawX, drawY, fw, CONSTANTS.HEAD_WIDTH * finalScale, true);
-  // SILL
-  drawRect(ctx, drawX, drawY + fh - CONSTANTS.SILL_WIDTH * finalScale, fw, CONSTANTS.SILL_WIDTH * finalScale, true);
-  // JAMBS
-  drawRect(ctx, drawX, drawY, CONSTANTS.JAMBS_WIDTH * finalScale, fh, false);
-  drawRect(ctx, drawX + fw - CONSTANTS.JAMBS_WIDTH * finalScale, drawY, CONSTANTS.JAMBS_WIDTH * finalScale, fh, false);
-  ctx.restore();
+    clearCanvas(ctx, rect.width, rect.height);
+    if (overlay) overlay.innerHTML = '';
 
-  // 2. Rysowanie SKRZYDEŁ (Sash)
-  const sashW = derived.sashWidth * finalScale;
-  const sashH = derived.sashHeight * finalScale;
-  const sashX = drawX + (fw - sashW) / 2;
-  const sashY = drawY + (fh - sashH) / 2; // Uproszczenie: wyśrodkowane
+    const frameWidth = Number(windowSpec.frame.width);
+    const frameHeight = Number(windowSpec.frame.height);
+    if (!frameWidth || !frameHeight) return;
 
-  // Top Sash
-  const topSashH = (derived.sashHeight / 2) * finalScale; 
-  // Rysujemy po prostu całe skrzydło jako kontener dla szprosów
-  
-  // Tło za oknem (wnętrze pokoju / podwórko)
-  ctx.fillStyle = '#f1f5f9';
-  ctx.fillRect(sashX, sashY, sashW, sashH);
+    let derived;
+    try {
+        derived = deriveWindowData(windowSpec, settings);
+    } catch (e) { console.error(e); return; }
 
-  // Stiles (Pionowe ramy skrzydła)
-  const stileW = CONSTANTS.STILE_WIDTH * finalScale;
-  drawRect(ctx, sashX, sashY, stileW, sashH, false); // Lewy
-  drawRect(ctx, sashX + sashW - stileW, sashY, stileW, sashH, false); // Prawy
-  
-  // Rails (Poziome ramy)
-  const topRailH = CONSTANTS.TOP_RAIL_WIDTH * finalScale;
-  const bottomRailH = CONSTANTS.BOTTOM_RAIL_WIDTH * finalScale;
-  const meetRailH = CONSTANTS.MEETING_RAIL_WIDTH * finalScale;
-  
-  drawRect(ctx, sashX, sashY, sashW, topRailH, true); // Top
-  drawRect(ctx, sashX, sashY + sashH - bottomRailH, sashW, bottomRailH, true); // Bottom
-  drawRect(ctx, sashX, sashY + (sashH/2) - (meetRailH/2), sashW, meetRailH, true); // Meeting rail
+    // Oblicz skalę
+    const margin = 80; // Większy margines na wymiary
+    const maxDim = Math.max(frameWidth, frameHeight);
+    const fitScale = Math.min((rect.width - margin*2) / maxDim, (rect.height - margin*2) / maxDim);
+    const finalScale = fitScale * panzoom.scale;
 
-  // 3. Szkło i Szprosy
-  const glassX = sashX + stileW;
-  const glassY = sashY + topRailH;
-  const glassW = sashW - 2 * stileW;
-  const glassH = sashH - topRailH - bottomRailH;
-  
-  // Rysowanie efektu szkła na całej powierzchni
-  drawGlassEffect(ctx, glassX, glassY, glassW, glassH);
+    const centerX = (rect.width / 2) + panzoom.translateX;
+    const centerY = (rect.height / 2) + panzoom.translateY;
 
-  // Szprosy (Bars)
-  const barW = CONSTANTS.GLAZING_BAR_WIDTH * finalScale;
-  const bars = windowSpec.sash.grid.mode === 'custom' 
-      ? windowSpec.sash.grid.customBars 
-      : derived.barPositions;
+    const startX = centerX - (frameWidth * finalScale) / 2;
+    const startY = centerY - (frameHeight * finalScale) / 2;
 
-  ctx.fillStyle = createWoodGradient(ctx, 0, 0, barW, 100, false); // Pattern gradient
-  
-  // Pionowe
-  (bars.vertical || []).forEach(pos => {
-      const bx = glassX + pos * finalScale - barW/2;
-      drawRect(ctx, bx, glassY, barW, glassH, false);
-  });
+    // --- RYSOWANIE ---
 
-  // Poziome
-  (bars.horizontal || []).forEach(pos => {
-      const by = glassY + pos * finalScale - barW/2;
-      drawRect(ctx, glassX, by, glassW, barW, true);
-  });
+    const C = CONSTANTS;
+    const fw = frameWidth * finalScale;
+    const fh = frameHeight * finalScale;
 
-  // 4. Wymiarowanie Techniczne
-  const dimOffset = 30;
-  // Szerokość całkowita
-  drawArrow(ctx, drawX, drawY - dimOffset, drawX + fw, drawY - dimOffset, `${Math.round(frameWidth)}`);
-  // Wysokość całkowita
-  drawArrow(ctx, drawX - dimOffset, drawY, drawX - dimOffset, drawY + fh, `${Math.round(frameHeight)}`);
-  
-  // Rysowanie "Horns" (rogi)
-  if (windowSpec.sash.horns) {
-      const hornExt = (windowSpec.sash.hornExtension || 0) * finalScale;
-      // Horn lewy
-      drawRect(ctx, sashX - stileW/4, sashY + (sashH/2), stileW + stileW/4, hornExt, false);
-      // Horn prawy
-      drawRect(ctx, sashX + sashW - stileW, sashY + (sashH/2), stileW + stileW/4, hornExt, false);
-  }
+    // 1. RAMA (Frame)
+    drawRect(ctx, startX, startY, fw, fh, STYLES.frameFill, STYLES.frameStroke);
+    
+    // Wycieramy środek ramy (światło ramy)
+    const JAMB_W = (C.JAMBS_WIDTH || 69) * finalScale;
+    const HEAD_W = (C.HEAD_WIDTH || 69) * finalScale;
+    const SILL_W = (C.SILL_WIDTH || 95) * finalScale;
+
+    // Wewnętrzna krawędź ramy
+    const innerX = startX + JAMB_W;
+    const innerY = startY + HEAD_W;
+    const innerW = fw - 2 * JAMB_W;
+    const innerH = fh - HEAD_W - SILL_W;
+    
+    ctx.fillStyle = '#ffffff'; // Tło otworu
+    ctx.fillRect(innerX, innerY, innerW, innerH);
+    ctx.strokeRect(innerX, innerY, innerW, innerH); // Wewnętrzny obrys ramy
+
+    // 2. SKRZYDŁA (Sash)
+    const sashW = derived.sashWidth * finalScale;
+    const sashH = derived.sashHeight * finalScale;
+    const sashX = startX + (fw - sashW) / 2;
+    const sashY = startY + (fh - sashH) / 2; // Wyśrodkowane (zamknięte)
+
+    // Top Sash (Zewnętrzne)
+    drawRect(ctx, sashX, sashY, sashW, sashH/2, STYLES.sashFill, STYLES.sashStroke);
+    // Bottom Sash (Wewnętrzne)
+    drawRect(ctx, sashX, sashY + sashH/2, sashW, sashH/2, STYLES.sashFill, STYLES.sashStroke);
+
+    // 3. SZPROSY I SZKŁO
+    const STILE_W = (C.STILE_WIDTH || 57) * finalScale;
+    const RAIL_H = (C.TOP_RAIL_WIDTH || 57) * finalScale;
+    const BAR_W = (C.GLAZING_BAR_WIDTH || 18) * finalScale;
+
+    // Obszar szkła Top
+    const glassX = sashX + STILE_W;
+    const glassTopY = sashY + RAIL_H;
+    const glassW = sashW - 2 * STILE_W;
+    const glassH = (sashH/2) - 2 * RAIL_H;
+
+    // Wypełnienie szkła
+    ctx.fillStyle = STYLES.glassFill;
+    ctx.fillRect(glassX, glassTopY, glassW, glassH); // Top
+    ctx.fillRect(glassX, glassTopY + sashH/2, glassW, glassH); // Bottom
+
+    // Szprosy
+    const bars = windowSpec.sash.grid.mode === 'custom' 
+            ? windowSpec.sash.grid.customBars 
+            : derived.barPositions;
+
+    ctx.fillStyle = STYLES.barStroke;
+
+    // Rysowanie szprosów - funkcja pomocnicza
+    const drawBarsForSash = (baseY) => {
+        // Pionowe
+        if (bars.vertical) {
+            bars.vertical.forEach(pos => {
+                const bx = glassX + pos * finalScale - BAR_W/2;
+                ctx.fillRect(bx, baseY, BAR_W, glassH);
+                ctx.strokeRect(bx, baseY, BAR_W, glassH);
+            });
+        }
+        // Poziome
+        if (bars.horizontal) {
+            bars.horizontal.forEach(pos => {
+                const by = baseY + pos * finalScale - BAR_W/2;
+                // Rysujemy tylko jeśli mieści się w połówce skrzydła
+                if (pos * finalScale < glassH) {
+                    ctx.fillRect(glassX, by, glassW, BAR_W);
+                    ctx.strokeRect(glassX, by, glassW, BAR_W);
+                }
+            });
+        }
+    };
+
+    drawBarsForSash(glassTopY); // Top
+    drawBarsForSash(glassTopY + sashH/2); // Bottom
+
+    // Horns
+    if (windowSpec.sash.horns) {
+        const hornExt = (windowSpec.sash.hornExtension || 75) * finalScale;
+        // Dorysowanie rogów do górnego skrzydła
+        const hornY = sashY + sashH/2;
+        // Lewy
+        drawRect(ctx, sashX - 10, hornY - 2, STILE_W + 10, hornExt, STYLES.sashFill, STYLES.sashStroke);
+        // Prawy
+        drawRect(ctx, sashX + sashW - STILE_W, hornY - 2, STILE_W + 10, hornExt, STYLES.sashFill, STYLES.sashStroke);
+    }
+
+    // 4. WYMIAROWANIE (Technical Dimensions)
+    
+    // Całkowita szerokość (Na górze)
+    drawDimensionLine(ctx, startX, startY, startX + fw, startY, `${Math.round(frameWidth)}`, 30);
+    
+    // Całkowita wysokość (Z lewej)
+    drawDimensionLine(ctx, startX, startY, startX, startY + fh, `${Math.round(frameHeight)}`, 30);
+
+    // Wymiar światła szyby (orientacyjnie, na dole)
+    // drawDimensionLine(ctx, glassX, startY + fh, glassX + glassW, startY + fh, `Glass W: ${Math.round(derived.glazing.paneWidth)}`, -30);
 }
