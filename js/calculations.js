@@ -4,45 +4,57 @@
  */
 
 export const CONSTANTS = Object.freeze({
-    // Frame ⇄ Sash deductions
+    // Frame <-> Sash deductions
     SASH_WIDTH_DEDUCTION: 178,
-    SASH_HEIGHT_DEDUCTION: 106,
+    // Total sash height deduction from frame: top_sash + bot_sash = frame_height - 92
+    // Bottom sash is 33mm taller than top sash
+    SASH_HEIGHT_DEDUCTION: 92,
+    SASH_HEIGHT_DIFFERENCE: 33,
 
-    // Frame component deductions (legacy Excel values)
+    // Frame component deductions (verified against Excel)
     JAMB_HEIGHT_DEDUCTION: 106,
-    HEAD_WIDTH_DEDUCTION: 138,
-    SILL_WIDTH_DEDUCTION: 138,
+    HEAD_WIDTH_DEDUCTION: 0,
+    SILL_WIDTH_DEDUCTION: 0,
     EXTERNAL_HEAD_LINER_DEDUCTION: 204,
     INTERNAL_HEAD_LINER_DEDUCTION: 170,
 
-    // Timber dimensions (mm)
-    JAMBS_WIDTH: 69,
-    HEAD_WIDTH: 69,
-    SILL_WIDTH: 95,
+    // Timber dimensions (mm) - visible from front elevation
+    JAMBS_WIDTH: 28,
+    HEAD_WIDTH: 28,
+    SILL_WIDTH: 46,
 
     // Glazing bars
     GLAZING_BAR_WIDTH: 18,
     GLAZING_BAR_DEPTH: 35,
 
-    // Sash components (mm)
+    // Sash components (mm) - verified against Excel
     STILE_WIDTH: 57,
     TOP_RAIL_WIDTH: 57,
-    BOTTOM_RAIL_WIDTH: 70,
-    MEETING_RAIL_WIDTH: 50,
+    BOTTOM_RAIL_WIDTH: 90,
+    MEETING_RAIL_WIDTH: 43,
 
     // Horn allowances
-    HORN_ALLOWANCE_VERTICAL: 50,
+    HORN_ALLOWANCE_VERTICAL: 70,
     HORN_ALLOWANCE_HORIZONTAL: 30,
+
+    // Glass deduction from sash width (verified: glass_w = sash_w - 90)
+    GLASS_WIDTH_DEDUCTION: 90,
+    // Glass deduction from sash height (verified: glass_h = top_sash_h - 76)
+    GLASS_HEIGHT_DEDUCTION: 76,
 
     // Tolerances
     GLASS_TOLERANCE: 3,
 
-    // Timber sections (for reporting)
-    FRAME_SECTION: '69 × 57',
-    SILL_SECTION: '95 × 57',
-    SASH_SECTION: '57 × 57',
-    HEAD_LINER_SECTION: '17 × 102',
-    JAMB_LINER_SECTION: '17 × 85',
+    // Timber sections (for reporting) - verified against Excel
+    FRAME_SECTION: '28 x 141',
+    SILL_SECTION: '69 x 127',
+    SASH_SECTION: '57 x 57',
+    BOTTOM_RAIL_SECTION: '57 x 90',
+    MEETING_RAIL_SECTION: '57 x 43',
+    HEAD_LINER_EXT_SECTION: '17 x 102',
+    HEAD_LINER_INT_SECTION: '17 x 85',
+    JAMB_LINER_EXT_SECTION: '17 x 102',
+    JAMB_LINER_INT_SECTION: '17 x 86',
 
     // Waste factors
     FRAME_WASTE_FACTOR: 1.15,
@@ -115,7 +127,11 @@ export function calculateWindow(frameWidth, frameHeight, configuration = '2x2', 
     validateInputs(frameWidth, frameHeight, configData);
 
     const sashWidth = frameWidth - CONSTANTS.SASH_WIDTH_DEDUCTION;
-    const sashHeight = frameHeight - CONSTANTS.SASH_HEIGHT_DEDUCTION;
+    const totalSashHeight = frameHeight - CONSTANTS.SASH_HEIGHT_DEDUCTION;
+    const topSashHeight = Math.floor((totalSashHeight - CONSTANTS.SASH_HEIGHT_DIFFERENCE) / 2);
+    const bottomSashHeight = topSashHeight + CONSTANTS.SASH_HEIGHT_DIFFERENCE;
+    // For legacy compatibility, sashHeight = totalSashHeight
+    const sashHeight = totalSashHeight;
 
     const frameComponents = calculateFrameComponents(frameWidth, frameHeight);
     const sashComponents = calculateSashComponents(sashWidth, sashHeight, configData);
@@ -131,7 +147,9 @@ export function calculateWindow(frameWidth, frameHeight, configuration = '2x2', 
         },
         sash: {
             width: sashWidth,
-            height: sashHeight
+            height: sashHeight,
+            topHeight: topSashHeight,
+            bottomHeight: bottomSashHeight
         },
         components: {
             frame: frameComponents,
@@ -255,7 +273,10 @@ export function deriveWindowData(windowSpec, settings = {}) {
 
     const config = resolveConfiguration(gridMode, windowSpec.sash?.grid ?? {});
     const sashWidth = frameWidth - CONSTANTS.SASH_WIDTH_DEDUCTION;
-    const sashHeight = frameHeight - CONSTANTS.SASH_HEIGHT_DEDUCTION;
+    const totalSashHeight = frameHeight - CONSTANTS.SASH_HEIGHT_DEDUCTION;
+    const topSashHeight = Math.floor((totalSashHeight - CONSTANTS.SASH_HEIGHT_DIFFERENCE) / 2);
+    const bottomSashHeight = topSashHeight + CONSTANTS.SASH_HEIGHT_DIFFERENCE;
+    const sashHeight = totalSashHeight;
 
     const sashComponents = calculateSashComponentSet(windowSpec, settings, sashWidth, sashHeight);
     const boxComponents = calculateBoxComponentSet(windowSpec, frameWidth, frameHeight);
@@ -274,6 +295,8 @@ export function deriveWindowData(windowSpec, settings = {}) {
     return {
         sashWidth,
         sashHeight,
+        topSashHeight,
+        bottomSashHeight,
         config,
         components: { sash: sashComponents, box: boxComponents },
         glazingItems: [glazingSummary],
@@ -433,10 +456,10 @@ function calculateFrameComponents(frameWidth, frameHeight) {
         head: buildComponent('Head', CONSTANTS.HEAD_WIDTH, headLength, 1, CONSTANTS.FRAME_SECTION),
         jambs: buildComponent('Jamb', CONSTANTS.JAMBS_WIDTH, jambLength, 2, CONSTANTS.FRAME_SECTION),
         sill: buildComponent('Sill', CONSTANTS.SILL_WIDTH, sillLength, 1, CONSTANTS.SILL_SECTION),
-        externalHeadLiner: buildComponent('External head liner', 17, extHeadLiner, 1, CONSTANTS.HEAD_LINER_SECTION, 'Softwood'),
-        internalHeadLiner: buildComponent('Internal head liner', 17, intHeadLiner, 1, CONSTANTS.HEAD_LINER_SECTION, 'Softwood'),
-        externalJambLiner: buildComponent('External jamb liner', 17, extJambLiner, 2, CONSTANTS.JAMB_LINER_SECTION, 'Softwood'),
-        internalJambLiner: buildComponent('Internal jamb liner', 17, intJambLiner, 2, CONSTANTS.JAMB_LINER_SECTION, 'Softwood')
+        externalHeadLiner: buildComponent('External head liner', 17, extHeadLiner, 1, CONSTANTS.HEAD_LINER_EXT_SECTION, 'Softwood'),
+        internalHeadLiner: buildComponent('Internal head liner', 17, intHeadLiner, 1, CONSTANTS.HEAD_LINER_INT_SECTION, 'Softwood'),
+        externalJambLiner: buildComponent('External jamb liner', 17, extJambLiner, 2, CONSTANTS.JAMB_LINER_EXT_SECTION, 'Softwood'),
+        internalJambLiner: buildComponent('Internal jamb liner', 17, intJambLiner, 2, CONSTANTS.JAMB_LINER_INT_SECTION, 'Softwood')
     };
 }
 

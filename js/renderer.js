@@ -254,10 +254,10 @@ export function renderWindowPreview(windowSpec, settings = {}) {
     // 1. RAMA (Frame)
     drawRect(ctx, startX, startY, fw, fh, STYLES.frameFill, STYLES.frameStroke);
     
-    // Wycieramy środek ramy (światło ramy)
-    const JAMB_W = (C.JAMBS_WIDTH || 69) * finalScale;
-    const HEAD_W = (C.HEAD_WIDTH || 69) * finalScale;
-    const SILL_W = (C.SILL_WIDTH || 95) * finalScale;
+    // Frame profile widths (visible from front)
+    const JAMB_W = (C.JAMBS_WIDTH || 28) * finalScale;
+    const HEAD_W = (C.HEAD_WIDTH || 28) * finalScale;
+    const SILL_W = (C.SILL_WIDTH || 46) * finalScale;
 
     // Wewnętrzna krawędź ramy
     const innerX = startX + JAMB_W;
@@ -265,36 +265,47 @@ export function renderWindowPreview(windowSpec, settings = {}) {
     const innerW = fw - 2 * JAMB_W;
     const innerH = fh - HEAD_W - SILL_W;
     
-    ctx.fillStyle = '#ffffff'; // Tło otworu
+    ctx.fillStyle = '#ffffff';
     ctx.fillRect(innerX, innerY, innerW, innerH);
-    ctx.strokeRect(innerX, innerY, innerW, innerH); // Wewnętrzny obrys ramy
+    ctx.strokeRect(innerX, innerY, innerW, innerH);
 
-    // 2. SKRZYDŁA (Sash)
+    // 2. SKRZYDŁA (Sash) - top and bottom with correct heights
     const sashW = derived.sashWidth * finalScale;
-    const sashH = derived.sashHeight * finalScale;
+    const topSashH = (derived.topSashHeight || derived.sashHeight / 2) * finalScale;
+    const botSashH = (derived.bottomSashHeight || derived.sashHeight / 2) * finalScale;
     const sashX = startX + (fw - sashW) / 2;
-    const sashY = startY + (fh - sashH) / 2; // Wyśrodkowane (zamknięte)
+    
+    // Top sash sits at the top of the inner frame
+    const topSashY = startY + HEAD_W + 3 * finalScale;
+    // Bottom sash sits at the bottom
+    const botSashY = startY + fh - SILL_W - 3 * finalScale - botSashH;
 
-    // Top Sash (Zewnętrzne)
-    drawRect(ctx, sashX, sashY, sashW, sashH/2, STYLES.sashFill, STYLES.sashStroke);
-    // Bottom Sash (Wewnętrzne)
-    drawRect(ctx, sashX, sashY + sashH/2, sashW, sashH/2, STYLES.sashFill, STYLES.sashStroke);
+    // Top Sash
+    drawRect(ctx, sashX, topSashY, sashW, topSashH, STYLES.sashFill, STYLES.sashStroke);
+    // Bottom Sash
+    drawRect(ctx, sashX, botSashY, sashW, botSashH, STYLES.sashFill, STYLES.sashStroke);
 
     // 3. SZPROSY I SZKŁO
     const STILE_W = (C.STILE_WIDTH || 57) * finalScale;
-    const RAIL_H = (C.TOP_RAIL_WIDTH || 57) * finalScale;
+    const TOP_RAIL_H = (C.TOP_RAIL_WIDTH || 57) * finalScale;
+    const BOT_RAIL_H = (C.BOTTOM_RAIL_WIDTH || 90) * finalScale;
+    const MEET_RAIL_H = (C.MEETING_RAIL_WIDTH || 43) * finalScale;
     const BAR_W = (C.GLAZING_BAR_WIDTH || 18) * finalScale;
 
-    // Obszar szkła Top
+    // Glass area - Top sash
     const glassX = sashX + STILE_W;
-    const glassTopY = sashY + RAIL_H;
     const glassW = sashW - 2 * STILE_W;
-    const glassH = (sashH/2) - 2 * RAIL_H;
+    const glassTopY = topSashY + TOP_RAIL_H;
+    const glassTopH = topSashH - TOP_RAIL_H - MEET_RAIL_H;
+
+    // Glass area - Bottom sash
+    const glassBotY = botSashY + MEET_RAIL_H;
+    const glassBotH = botSashH - MEET_RAIL_H - BOT_RAIL_H;
 
     // Wypełnienie szkła
     ctx.fillStyle = STYLES.glassFill;
-    ctx.fillRect(glassX, glassTopY, glassW, glassH); // Top
-    ctx.fillRect(glassX, glassTopY + sashH/2, glassW, glassH); // Bottom
+    ctx.fillRect(glassX, glassTopY, glassW, glassTopH);
+    ctx.fillRect(glassX, glassBotY, glassW, glassBotH);
 
     // Szprosy
     const bars = windowSpec.sash.grid.mode === 'custom' 
@@ -304,7 +315,7 @@ export function renderWindowPreview(windowSpec, settings = {}) {
     ctx.fillStyle = STYLES.barStroke;
 
     // Rysowanie szprosów - funkcja pomocnicza
-    const drawBarsForSash = (baseY) => {
+    const drawBarsForSash = (baseY, glassH) => {
         // Pionowe
         if (bars.vertical) {
             bars.vertical.forEach(pos => {
@@ -317,7 +328,6 @@ export function renderWindowPreview(windowSpec, settings = {}) {
         if (bars.horizontal) {
             bars.horizontal.forEach(pos => {
                 const by = baseY + pos * finalScale - BAR_W/2;
-                // Rysujemy tylko jeśli mieści się w połówce skrzydła
                 if (pos * finalScale < glassH) {
                     ctx.fillRect(glassX, by, glassW, BAR_W);
                     ctx.strokeRect(glassX, by, glassW, BAR_W);
@@ -326,18 +336,17 @@ export function renderWindowPreview(windowSpec, settings = {}) {
         }
     };
 
-    drawBarsForSash(glassTopY); // Top
-    drawBarsForSash(glassTopY + sashH/2); // Bottom
+    drawBarsForSash(glassTopY, glassTopH);
+    drawBarsForSash(glassBotY, glassBotH);
 
     // Horns
     if (windowSpec.sash.horns) {
-        const hornExt = (windowSpec.sash.hornExtension || 75) * finalScale;
-        // Dorysowanie rogów do górnego skrzydła
-        const hornY = sashY + sashH/2;
-        // Lewy
-        drawRect(ctx, sashX - 10, hornY - 2, STILE_W + 10, hornExt, STYLES.sashFill, STYLES.sashStroke);
-        // Prawy
-        drawRect(ctx, sashX + sashW - STILE_W, hornY - 2, STILE_W + 10, hornExt, STYLES.sashFill, STYLES.sashStroke);
+        const hornExt = (windowSpec.sash.hornExtension || 70) * finalScale;
+        const hornY = topSashY + topSashH;
+        // Lewy horn
+        drawRect(ctx, sashX, hornY, STILE_W, hornExt, STYLES.sashFill, STYLES.sashStroke);
+        // Prawy horn
+        drawRect(ctx, sashX + sashW - STILE_W, hornY, STILE_W, hornExt, STYLES.sashFill, STYLES.sashStroke);
     }
 
     // 4. WYMIAROWANIE (Technical Dimensions)
